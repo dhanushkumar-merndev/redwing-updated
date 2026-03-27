@@ -13,6 +13,8 @@ interface MobileFiltersProps {
   isOpen: boolean;
   onClose: () => void;
   activeDepartment: Department;
+  departmentCounts?: { sales: number; service: number };
+  statusCounts?: { all: number; pending: number; interested: number; inprocess: number; rejected: number };
   onDepartmentChange: (d: Department) => void;
   activeStatus: ApplicantStatus | "all";
   onStatusChange: (s: ApplicantStatus | "all") => void;
@@ -43,6 +45,8 @@ export default function MobileFilters({
   isOpen,
   onClose,
   activeDepartment,
+  departmentCounts,
+  statusCounts,
   onDepartmentChange,
   activeStatus,
   onStatusChange,
@@ -65,15 +69,18 @@ export default function MobileFilters({
   // Sync internal state when drawer opens
   useEffect(() => {
     if (isOpen) {
-      setTempFilters({
-        dep: activeDepartment,
-        status: activeStatus,
-        role: selectedRole,
-        sortF: sortField,
-        sortO: sortOrder
-      });
+      setTimeout(() => {
+        setTempFilters({
+          dep: activeDepartment,
+          status: activeStatus,
+          role: selectedRole,
+          sortF: sortField,
+          sortO: sortOrder
+        });
+      }, 0);
     }
   }, [isOpen, activeDepartment, activeStatus, selectedRole, sortField, sortOrder]);
+
 
   // Prevent scroll when open
   useEffect(() => {
@@ -143,13 +150,21 @@ export default function MobileFilters({
                       key={d}
                       onClick={() => setTempFilters(prev => ({ ...prev, dep: d, role: "all" }))}
                       className={cn(
-                        "flex h-14 items-center justify-center rounded-2xl border-2 text-sm font-bold transition-all",
+                        "flex flex-col h-16 items-center justify-center rounded-2xl border-2 transition-all p-2",
                         tempFilters.dep === d
                           ? "border-primary bg-primary/5 text-primary"
                           : "border-zinc-100 bg-zinc-50 text-zinc-500"
                       )}
                     >
-                      {d.toUpperCase()}
+                      <span className="text-sm font-bold">{d.toUpperCase()}</span>
+                      {departmentCounts && (
+                        <span className={cn(
+                          "text-[10px] font-bold mt-0.5",
+                          tempFilters.dep === d ? "text-primary/70" : "text-zinc-400"
+                        )}>
+                          {departmentCounts[d]} applicants
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>
@@ -167,17 +182,27 @@ export default function MobileFilters({
                         "flex h-10 items-center gap-2 rounded-full border px-4 text-xs font-bold transition-all",
                         tempFilters.status === s.value
                           ? "border-zinc-900 bg-zinc-900 text-white"
-                          : "border-zinc-100 bg-zinc-50 text-zinc-500 hover:border-zinc-200"
+                          : "border-zinc-100 bg-white text-zinc-500"
                       )}
                     >
-                      <span className={cn(
-                        "h-1.5 w-1.5 rounded-full",
-                        s.value === 'all' ? 'bg-zinc-400' : 
-                        s.value === 'pending' ? 'bg-amber-500' :
-                        s.value === 'interested' ? 'bg-emerald-500' :
-                        s.value === 'inprocess' ? 'bg-blue-500' : 'bg-red-500'
-                      )} />
-                      {s.label}
+                      <div className="flex items-center gap-1.5">
+                        <span className={cn(
+                          "h-1.5 w-1.5 rounded-full",
+                          s.value === 'all' ? 'bg-zinc-400' : 
+                          s.value === 'pending' ? 'bg-amber-500' :
+                          s.value === 'interested' ? 'bg-emerald-500' :
+                          s.value === 'inprocess' ? 'bg-blue-500' : 'bg-red-500'
+                        )} />
+                        <span className="italic">{s.label}</span>
+                      </div>
+                      {statusCounts && (
+                        <span className={cn(
+                          "text-[10px] opacity-70 ml-1 font-bold",
+                          tempFilters.status === s.value ? "text-white" : "text-zinc-400"
+                        )}>
+                          {statusCounts[s.value]}
+                        </span>
+                      )}
                     </button>
                   ))}
                 </div>

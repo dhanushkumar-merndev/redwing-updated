@@ -36,7 +36,7 @@ interface ApplicantCardProps {
 
 const statusConfig: Record<ApplicantStatus, { label: string; color: string; bgColor: string; borderColor: string; icon: React.ElementType }> = {
   pending: { label: "Pending", color: "text-chart-1", bgColor: "bg-chart-1/15", borderColor: "border-chart-1/20", icon: CircleDashed },
-  rejected: { label: "Rejected", color: "text-zinc-500", bgColor: "bg-zinc-100", borderColor: "border-zinc-200", icon: XCircle },
+  rejected: { label: "Rejected", color: "text-chart-2", bgColor: "bg-chart-2/15", borderColor: "border-chart-2/20", icon: XCircle },
   interested: { label: "Interested", color: "text-chart-3", bgColor: "bg-chart-3/15", borderColor: "border-chart-3/20", icon: CheckCircle },
   inprocess: { label: "In Process", color: "text-chart-4", bgColor: "bg-chart-4/15", borderColor: "border-chart-4/20", icon: RefreshCw },
 };

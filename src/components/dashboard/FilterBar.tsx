@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useState, useTransition } from "react";
+import { useMounted } from "@/hooks/useMounted";
 import {
   Select,
   SelectContent,
@@ -49,12 +50,8 @@ export default function FilterBar({
   sortOrder,
   onSortOrderChange,
 }: FilterBarProps) {
-  const [mounted, setMounted] = useState(false);
-  
-  useEffect(() => {
-    const handle = requestAnimationFrame(() => setMounted(true));
-    return () => cancelAnimationFrame(handle);
-  }, []);
+  const mounted = useMounted();
+  const [, startTransition] = useTransition();
 
   const departmentRoles = ROLES_BY_DEPARTMENT[department];
   const activeFiltersCount = (selectedRole !== "all" ? 1 : 0) + (sortField !== "created_time" || sortOrder !== "desc" ? 1 : 0);

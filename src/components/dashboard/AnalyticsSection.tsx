@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition, useEffect, useCallback } from "react";
+import { useMounted } from "@/hooks/useMounted";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,7 +26,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import { ROLE_SHORT_NAMES } from "@/lib/roles";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import {  format, isWithinInterval, startOfDay, endOfDay, parseISO } from "date-fns";
@@ -53,6 +54,19 @@ interface AggregatedPoint {
   rejected: number;
 }
 
+const analyticsVariants: Variants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    transition: { 
+      duration: 0.6, 
+      ease: [0.22, 1, 0.36, 1], // Quintic out
+      delay: 0.15
+    } 
+  },
+};
+
 export default function AnalyticsSection() {
   const [entries, setEntries] = useState<AnalyticsEntry[]>([]);
   const [chartType, setChartType] = useState<"area" | "bar">("area");
@@ -65,13 +79,8 @@ export default function AnalyticsSection() {
     from: START_DATE,
     to: new Date(),
   });
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
   const [, startTransition] = useTransition();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
 
   const fetchAnalytics = useCallback(() => {
     startTransition(async () => {
@@ -89,6 +98,7 @@ export default function AnalyticsSection() {
   useEffect(() => {
     fetchAnalytics();
   }, [fetchAnalytics]);
+
 
   // Aggregate Trends on client
   const filteredAnalytics = useMemo(() => {
@@ -176,18 +186,18 @@ export default function AnalyticsSection() {
     ? STATUS_KEYS
     : STATUS_KEYS.filter((k) => k === statusFilter);
 
-  if (!mounted) return <div className="grid gap-3 md:grid-cols-2 h-[350px] opacity-0" />;
+  if (!mounted) return <div className="grid gap-3 md:grid-cols-2 h-[400px] opacity-0" />;
 
   return (
     <motion.div
       className="grid gap-3 md:grid-cols-2 md:gap-4"
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.2 }}
+      variants={analyticsVariants}
+      initial="hidden"
+      animate="visible"
     >
       {/* Trend Chart */}
       <Card className="shadow-sm overflow-hidden">
-        <CardHeader className="p-3 pb-2 md:p-4 md:pb-3 space-y-4">
+        <CardHeader className="py-4 px-6 md:px-6 space-y-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xs font-bold text-muted-foreground md:text-sm">
               Application Trends
@@ -242,7 +252,7 @@ export default function AnalyticsSection() {
           </div>
         </CardHeader>
 
-        <CardContent className="h-56 p-3 pt-0 md:h-64 md:p-4 md:pt-0">
+        <CardContent className="h-56 p-3 pr-6 pt-0 md:h-64 md:py-4 md:pr-6 md:pt-0">
           {filteredAnalytics.length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-zinc-400">
               No data in selected range
@@ -264,11 +274,12 @@ export default function AnalyticsSection() {
                       stroke={chartConfig[key].color}
                       fillOpacity={0.15}
                       strokeWidth={2}
+                      animationDuration={2000}
                     />
                   ))}
                 </AreaChart>
               ) : (
-                <BarChart data={filteredAnalytics} margin={{ left: -20, right: 10 }}>
+                <BarChart data={filteredAnalytics} margin={{ left: 6, right: 6 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
                   <XAxis dataKey="date" className="text-[10px] md:text-xs" />
                   <YAxis className="text-[10px] md:text-xs" width={30} />
@@ -279,6 +290,7 @@ export default function AnalyticsSection() {
                       dataKey={key}
                       fill={chartConfig[key].color}
                       radius={[4, 4, 0, 0]}
+                      animationDuration={2000}
                     />
                   ))}
                 </BarChart>
@@ -290,7 +302,7 @@ export default function AnalyticsSection() {
 
       {/* Role Breakdown */}
       <Card className="shadow-sm">
-        <CardHeader className="p-3 pb-2 md:p-4 md:pb-3 space-y-4">
+        <CardHeader className="py-4 px-6 md:px-6  pb-16 space-y-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xs font-bold text-muted-foreground md:text-sm">
               Role Breakdown
@@ -333,6 +345,7 @@ export default function AnalyticsSection() {
                     fill={chartConfig[key].color} 
                     stackId="a" 
                     radius={0} 
+                    animationDuration={2000}
                   />
                 ))}
               </BarChart>

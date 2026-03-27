@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import { useMounted } from "@/hooks/useMounted";
 
 interface HeaderProps {
   onRefresh: () => void;
@@ -11,10 +12,9 @@ interface HeaderProps {
 
 export default function Header({ onRefresh, isPending }: HeaderProps) {
   const [clock, setClock] = useState("");
-  const [mounted, setMounted] = useState(false);
+  const mounted = useMounted();
 
   useEffect(() => {
-    const frame = requestAnimationFrame(() => setMounted(true));
     const update = () => {
       const now = new Date();
       setClock(
@@ -28,7 +28,6 @@ export default function Header({ onRefresh, isPending }: HeaderProps) {
     update();
     const interval = setInterval(update, 60000);
     return () => {
-      cancelAnimationFrame(frame);
       clearInterval(interval);
     };
   }, []);

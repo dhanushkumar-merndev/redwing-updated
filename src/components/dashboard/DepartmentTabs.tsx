@@ -2,11 +2,14 @@
 
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useMounted } from "@/hooks/useMounted";
 import type { Department, ApplicantStatus } from "@/types";
 
 interface DepartmentTabsProps {
   activeDepartment: Department;
   activeStatus: ApplicantStatus | "all";
+  departmentCounts?: { sales: number; service: number };
+  statusCounts?: { all: number; pending: number; interested: number; inprocess: number; rejected: number };
   onDepartmentChange: (dept: Department) => void;
   onStatusChange: (status: ApplicantStatus | "all") => void;
 }
@@ -27,9 +30,12 @@ const DEPARTMENTS: { value: Department; label: string }[] = [
 export default function DepartmentTabs({
   activeDepartment,
   activeStatus,
+  departmentCounts,
+  statusCounts,
   onDepartmentChange,
   onStatusChange,
 }: DepartmentTabsProps) {
+  const mounted = useMounted();
   return (
     <div className="space-y-3">
       {/* Department Pills */}
@@ -42,6 +48,7 @@ export default function DepartmentTabs({
               onClick={() => onDepartmentChange(dept.value)}
               className={cn(
                 "relative rounded-md px-5 py-1.5 text-sm font-semibold transition-colors",
+                mounted && "flex items-center gap-2",
                 isActive
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground"
@@ -55,6 +62,14 @@ export default function DepartmentTabs({
                 />
               )}
               <span className="relative z-10">{dept.label}</span>
+              {mounted && departmentCounts && (
+                <span className={cn(
+                  "relative z-10 text-[10px] px-1.5 py-0.5 rounded-full font-bold",
+                  isActive ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                )}>
+                  {departmentCounts[dept.value]}
+                </span>
+              )}
             </button>
           );
         })}
@@ -70,6 +85,7 @@ export default function DepartmentTabs({
               onClick={() => onStatusChange(tab.value)}
               className={cn(
                 "relative flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold transition-colors",
+                mounted && "italic",
                 isActive
                   ? tab.activeText
                   : "text-muted-foreground hover:text-foreground"
@@ -83,7 +99,15 @@ export default function DepartmentTabs({
                 />
               )}
               <span className={cn("relative z-10 h-1.5 w-1.5 rounded-full", tab.dotColor)} />
-              <span className="relative z-10">{tab.label}</span>
+              <span className="relative z-10 italic">{tab.label}</span>
+              {mounted && statusCounts && (
+                <span className={cn(
+                  "relative z-10 text-[9px] font-bold opacity-70",
+                  isActive ? "text-inherit" : "text-muted-foreground"
+                )}>
+                  {statusCounts[tab.value]}
+                </span>
+              )}
             </button>
           );
         })}

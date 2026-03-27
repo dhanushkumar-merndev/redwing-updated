@@ -1,8 +1,9 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import type { StatsData } from "@/types";
+import { useMounted } from "@/hooks/useMounted";
 
 interface StatsRowProps {
   stats: StatsData;
@@ -15,20 +16,39 @@ const statConfig = [
   { key: "inprocess" as const, label: "In Process", color: "border-chart-4", textColor: "text-chart-4", bgColor: "bg-chart-4/10", icon: "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" },
 ];
 
-const containerVariants = {
-  hidden: {},
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
   visible: {
-    transition: { staggerChildren: 0.08 },
+    opacity: 1,
+    transition: { 
+      staggerChildren: 0.05,
+      delayChildren: 0.1
+    },
   },
 };
 
-const cardVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" } },
+const cardVariants: Variants = {
+  hidden: { opacity: 0, y: 15 },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    transition: { 
+      duration: 0.4, 
+      ease: [0.25, 0.1, 0.25, 1.0] 
+    } 
+  },
 };
 
 export default function StatsRow({ stats }: StatsRowProps) {
+  const mounted = useMounted();
+
   const total = stats.pending + stats.interested + stats.rejected + stats.inprocess;
+
+  if (!mounted) {
+    return (
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4 h-[100px] opacity-0" />
+    );
+  }
 
   return (
     <motion.div

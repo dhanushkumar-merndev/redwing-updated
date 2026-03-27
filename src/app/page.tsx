@@ -55,6 +55,27 @@ export default function DashboardPage() {
     return s;
   }, [applicants]);
 
+  const departmentCounts = useMemo(() => {
+    const counts = { sales: 0, service: 0 };
+    applicants.forEach((a) => {
+      const dept = getDepartment(a.position);
+      if (dept in counts) counts[dept]++;
+    });
+    return counts;
+  }, [applicants]);
+
+  const statusCountsForActiveDept = useMemo(() => {
+    const s = { all: 0, pending: 0, interested: 0, inprocess: 0, rejected: 0 };
+    applicants.forEach((a) => {
+      if (getDepartment(a.position) === activeDepartment) {
+        s.all++;
+        const status = a.status as keyof typeof s;
+        if (status in s) s[status]++;
+      }
+    });
+    return s;
+  }, [applicants, activeDepartment]);
+
   // Filtering Logic
   const filteredApplicants = useMemo(() => {
     return applicants
@@ -157,6 +178,8 @@ export default function DashboardPage() {
             <DepartmentTabs
               activeDepartment={activeDepartment}
               activeStatus={activeStatus}
+              departmentCounts={departmentCounts}
+              statusCounts={statusCountsForActiveDept}
               onDepartmentChange={(d) => handleFilterChange(() => {
                 setActiveDepartment(d);
                 setSelectedRole("all");
@@ -293,6 +316,8 @@ export default function DashboardPage() {
         isOpen={isFiltersOpen}
         onClose={() => setIsFiltersOpen(false)}
         activeDepartment={activeDepartment}
+        departmentCounts={departmentCounts}
+        statusCounts={statusCountsForActiveDept}
         onDepartmentChange={(d: Department) => handleFilterChange(() => {
           setActiveDepartment(d);
           setSelectedRole("all");
