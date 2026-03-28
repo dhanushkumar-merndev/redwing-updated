@@ -39,7 +39,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-secondary px-4 ">
+    <div className="flex min-h-dvh items-center justify-center bg-secondary px-4 ">
       <Card className="w-full max-w-md shadow-xl pt-12 pb-6 md:px-5 md:pb-12">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex items-center gap-3 flex-col">
@@ -76,7 +76,7 @@ export default function LoginPage() {
             </div>
             <Button
               type="submit"
-              className="w-full h-11 bg-primary text-white hover:bg-zinc-800"
+              className="w-full h-11 bg-primary text-white hover:bg-primary/80"
               disabled={isPending || !password}
             >
               {isPending ? "Signing in..." : "Sign In"}
