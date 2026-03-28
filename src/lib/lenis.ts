@@ -9,19 +9,21 @@ export const getLenis = (forceNew = false): Lenis => {
     if (lenisInstance) lenisInstance.destroy();
     
     lenisInstance = new Lenis({
-      duration: 1.3,
+      duration: 1.2,
       easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       orientation: 'vertical',
       gestureOrientation: 'vertical',
       smoothWheel: true,
       wheelMultiplier: 1,
-      touchMultiplier: 2,
+      touchMultiplier: 1.5,
+      lerp: 0.1,
     });
 
     // Handle frame updates
+    let rafId: number;
     const raf = (time: number) => {
       lenisInstance?.raf(time);
-      requestAnimationFrame(raf);
+      rafId = requestAnimationFrame(raf);
     }
     requestAnimationFrame(raf);
   }

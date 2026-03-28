@@ -25,8 +25,6 @@ export default function LoginPage() {
         });
 
         if (res.ok) {
-          const { hash } = await res.json();
-          document.cookie = `dashboard_auth=${hash}; path=/; max-age=86400; SameSite=Lax`;
           router.push("/");
           router.refresh();
         } else {

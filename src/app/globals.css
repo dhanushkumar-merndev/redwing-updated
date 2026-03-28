@@ -135,6 +135,19 @@
   .custom-scrollbar::-webkit-scrollbar-thumb {
     @apply bg-zinc-200 rounded-full hover:bg-zinc-300 transition-colors;
   }
+
+  /* Remove all focus outlines and tap highlights from chart elements */
+  .recharts-wrapper *,
+  .recharts-surface,
+  .recharts-surface *,
+  svg,
+  svg *,
+  path,
+  g,
+  rect {
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent;
+  }
 }
 
 /* Lenis Functional CSS */

@@ -13,7 +13,7 @@ export const mapRow = (row: (string | number)[], index: number): Applicant => {
   }
 
   return {
-    id: String(index + 2),
+    id: String(index + 1),
     created_time: String(row[0] ?? ""),
     position: String(row[1] ?? "") as Role,
     full_name: String(row[2] ?? ""),

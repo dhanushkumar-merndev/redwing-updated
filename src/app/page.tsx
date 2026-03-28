@@ -108,9 +108,17 @@ export default function DashboardPage() {
       .sort((a, b) => {
         let valA: string | number = "";
         let valB: string | number = "";
-        if (sortField === "updated") {
-          valA = a.updated.length > 0 ? a.updated[a.updated.length - 1] : a.created_time;
-          valB = b.updated.length > 0 ? b.updated[b.updated.length - 1] : b.created_time;
+        
+        if (sortField === "created_time" || sortField === "updated") {
+          const getTimestamp = (app: Applicant) => {
+            if (sortField === "updated" && app.updated.length > 0) {
+              const lastUpdate = app.updated[app.updated.length - 1].split("|")[0];
+              return new Date(lastUpdate).getTime() || 0;
+            }
+            return new Date(app.created_time).getTime() || 0;
+          };
+          valA = getTimestamp(a);
+          valB = getTimestamp(b);
         } else {
           const field = sortField as keyof Applicant;
           const aVal = a[field];
@@ -118,6 +126,7 @@ export default function DashboardPage() {
           valA = Array.isArray(aVal) ? aVal.length : (aVal as string | number);
           valB = Array.isArray(bVal) ? bVal.length : (bVal as string | number);
         }
+
         if (valA < valB) return sortOrder === "asc" ? -1 : 1;
         if (valA > valB) return sortOrder === "asc" ? 1 : -1;
         return 0;

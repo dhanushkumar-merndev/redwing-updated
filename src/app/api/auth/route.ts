@@ -13,7 +13,17 @@ export async function POST(req: NextRequest) {
 
     if (password === dashboardPassword) {
       const hashed = await hashPassword(password, authSalt);
-      return NextResponse.json({ hash: hashed });
+      const response = NextResponse.json({ hash: hashed });
+      
+      response.cookies.set("dashboard_auth", hashed, {
+        path: "/",
+        maxAge: 604800, // 7 days
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+      });
+      
+      return response;
     }
 
     return NextResponse.json({ error: "Invalid password" }, { status: 401 });

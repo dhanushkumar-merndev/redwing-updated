@@ -17,7 +17,7 @@ export async function PUT(
     return NextResponse.json({ error: "Too Many Requests" }, { status: 429 });
   }
 
-  const rowNumber = parseInt(id, 10);
+  const rowNumber = parseInt(id, 10) + 1; // Map ID 1 -> Row 2
   if (isNaN(rowNumber) || rowNumber < 2) {
     return NextResponse.json({ error: "Invalid applicant ID" }, { status: 400 });
   }
