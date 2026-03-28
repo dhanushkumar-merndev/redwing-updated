@@ -52,7 +52,7 @@ export default function StatsRow({ stats }: StatsRowProps) {
 
         return (
           <motion.div key={stat.key} variants={cardVariants}>
-            <div className="rounded-2xl bg-white shadow-sm border border-zinc-100 hover:shadow-md transition-shadow p-3 md:p-4 flex flex-col gap-3">
+            <div className="rounded-2xl bg-card shadow-sm border border-border/50 hover:shadow-md transition-shadow p-3 md:p-4 flex flex-col gap-3">
 
               {/* Top row: label pill + percentage pill */}
               <div className="flex items-center justify-between gap-2">
@@ -66,16 +66,16 @@ export default function StatsRow({ stats }: StatsRowProps) {
 
               {/* Count */}
               <p className={`text-3xl font-bold leading-none md:text-4xl ${stat.textColor}`}>
-                {stats[stat.key]}
+                {stats[stat.key] || 0}
               </p>
 
               {/* Pill progress bar */}
-              <div className="h-1.5 w-full rounded-full bg-zinc-100 overflow-hidden">
+              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                 <motion.div
                   className={`h-full rounded-full ${stat.barColor}`}
                   initial={{ width: 0 }}
                   animate={{ width: `${pct}%` }}
-                  transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] as const, delay: 0.2 }}
+                  transition={{ duration: 0.8, ease: "circOut", delay: 0.2 }}
                 />
               </div>
 

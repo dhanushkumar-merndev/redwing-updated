@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { getFromDB, saveToDB } from "@/lib/db";
 import { encryptName, decryptName } from "@/lib/crypto";
 
@@ -56,35 +57,35 @@ export default function UserRegistrationDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent 
-        className="sm:max-w-[425px] rounded-3xl pt-10"
+        className="sm:max-w-[425px] rounded-[2rem] pt-10 shadow-premium border-none"
         showCloseButton={false}
       >
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-zinc-900 text-center">Identity Required</DialogTitle>
-          <DialogDescription className="text-zinc-500 text-center pt-2">
+          <DialogTitle className="text-xl font-bold text-foreground text-center">Identity Required</DialogTitle>
+          <DialogDescription className="text-muted-foreground text-center pt-2">
             Please provide your name to continue. Your actions will be securely logged in the hiring dashboard.
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6 pt-4 pb-2">
-          <div className="space-y-2">
-            <label htmlFor="user-name" className="text-xs font-bold text-zinc-400 uppercase tracking-widest ml-1">
-              Your Full Name
-            </label>
-            <Input
-              id="user-name"
-              placeholder="e.g. John Doe"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="h-12 rounded-xl border-zinc-200 bg-zinc-50/50 px-4 font-medium transition-all focus:ring-primary/20"
-              autoFocus
-              required
-            />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name" className="text-xs font-bold text-muted-foreground uppercase tracking-wider ml-1">Full Name</Label>
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Enter your name..."
+                className="h-12 rounded-2xl border-border bg-muted/50 focus:bg-background transition-all px-4 font-bold text-foreground"
+                autoFocus
+                required
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button 
               type="submit" 
               disabled={isSubmitting || name.trim().length < 2}
-              className="w-full h-12 bg-primary text-white rounded-xl font-bold shadow-lg shadow-primary/20 transition-all active:scale-95 disabled:opacity-50"
+              className="w-full h-12 bg-primary text-primary-foreground rounded-xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-50"
             >
               {isSubmitting ? "Securing Identity..." : "Continue to Dashboard"}
             </Button>

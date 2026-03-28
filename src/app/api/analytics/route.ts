@@ -6,7 +6,9 @@ import { rateLimit } from "@/lib/rateLimit";
 import type { ApplicantStatus } from "@/types";
 
 export interface AnalyticsEntry {
-  date: string; // ISO date
+  id: string;
+  createdDate: string;   // YYYY-MM-DD (fixed creation)
+  completedDate: string | null; // YYYY-MM-DD (last update if not pending)
   role: string;
   status: ApplicantStatus | string;
 }
@@ -22,7 +24,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Too Many Requests" }, { status: 429 });
   }
 
-  const cached = getCache<AnalyticsResult>("analytics-v2");
+  const cached = getCache<AnalyticsResult>("analytics-v4");
   if (cached) {
     return NextResponse.json(cached);
   }
@@ -39,32 +41,44 @@ export async function GET(req: NextRequest) {
     const stats = { pending: 0, interested: 0, inprocess: 0, rejected: 0 };
     const entries: AnalyticsEntry[] = [];
 
+    const toDateStr = (date: Date) => {
+      const yStr = String(date.getFullYear());
+      const mStr = String(date.getMonth() + 1).padStart(2, "0");
+      const dStr = String(date.getDate()).padStart(2, "0");
+      return `${yStr}-${mStr}-${dStr}`;
+    };
+
     for (const app of applicants) {
       const s = app.status as ApplicantStatus;
       if (s in stats) stats[s]++;
 
-      // Use the last update if available, otherwise created_time
-      const timestamp = app.updated.length > 0 ? app.updated[app.updated.length - 1] : app.created_time;
-      if (!timestamp) continue;
+      // 1. Creation Date (Always fixed)
+      const cDate = new Date(app.created_time);
+      if (isNaN(cDate.getTime())) continue;
+      const createdDateStr = toDateStr(cDate);
 
-      const date = new Date(timestamp);
-      if (isNaN(date.getTime())) continue;
-
-      // Extract local YYYY-MM-DD to avoid UTC day-shift bugs
-      const yStr = String(date.getFullYear());
-      const mStr = String(date.getMonth() + 1).padStart(2, "0");
-      const dStr = String(date.getDate()).padStart(2, "0");
-      const dateStr = `${yStr}-${mStr}-${dStr}`;
+      // 2. Completion Date (Last update if not pending)
+      let completedDateStr: string | null = null;
+      if (s !== "pending" && app.updated.length > 0) {
+        const lastEntry = app.updated[app.updated.length - 1];
+        const lastTs = lastEntry.split("|")[0]; // Remove user suffix if present
+        const lDate = new Date(lastTs);
+        if (!isNaN(lDate.getTime())) {
+          completedDateStr = toDateStr(lDate);
+        }
+      }
 
       entries.push({
-        date: dateStr,
+        id: app.id,
+        createdDate: createdDateStr,
+        completedDate: completedDateStr,
         role: app.position,
         status: s,
       });
     }
 
     const result: AnalyticsResult = { entries, stats };
-    setCache("analytics-v3", result);
+    setCache("analytics-v4", result);
 
     return NextResponse.json(result);
   } catch (error) {

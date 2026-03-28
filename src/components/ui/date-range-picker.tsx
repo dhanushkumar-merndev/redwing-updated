@@ -44,13 +44,13 @@ export function DatePickerWithRange({
       id="date-range-picker-trigger"
       variant="outline"
       className={cn(
-        "h-7 justify-between text-left font-bold border-zinc-200 bg-white hover:bg-zinc-50 transition-colors shadow-none text-[10px] md:h-8 md:text-xs px-2.5",
+        "h-7 justify-between text-left font-bold border-border bg-background hover:bg-muted transition-colors shadow-none text-[10px] md:h-8 md:text-xs px-2.5",
         !date && "text-muted-foreground",
         className
       )}
       suppressHydrationWarning
     >
-      <CalendarIcon className="mr-1.5 h-3 w-3 text-zinc-400" />
+      <CalendarIcon className="mr-1.5 h-3 w-3 text-muted-foreground" />
 
       {date?.from ? (
         date.to ? (
@@ -64,7 +64,7 @@ export function DatePickerWithRange({
         <span>Pick range</span>
       )}
      
-      <ChevronDown className="ml-1.5 h-3 w-3 text-zinc-400 group-data-[state=open]:rotate-180 transition-transform" />
+      <ChevronDown className="ml-1.5 h-3 w-3 text-muted-foreground group-data-[state=open]:rotate-180 transition-transform" />
   </Button>
   )
 
@@ -91,13 +91,13 @@ export function DatePickerWithRange({
               disabled={minDate ? { before: minDate } : undefined}
             />
 
-            <div className="border-t p-3 flex flex-col sm:flex-row items-center justify-between gap-4 bg-zinc-50/50">
+            <div className="border-t p-3 flex flex-col sm:flex-row items-center justify-between gap-4 bg-muted/50">
               <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto sm:overflow-visible pb-1 sm:pb-0">
-                <div className="h-8 min-w-[85px] px-2 flex items-center justify-center rounded-md border border-zinc-200 bg-white text-[10px] font-bold text-zinc-800 shadow-sm">
+                <div className="h-8 min-w-[85px] px-2 flex items-center justify-center rounded-md border border-border bg-background text-[10px] font-bold text-foreground shadow-sm">
                   {internalDate?.from ? format(internalDate.from, "dd MMM yy") : "—"}
                 </div>
-                <div className="w-1.5 h-px bg-zinc-300 shrink-0" />
-                <div className="h-8 min-w-[85px] px-2 flex items-center justify-center rounded-md border border-zinc-200 bg-white text-[10px] font-bold text-zinc-800 shadow-sm">
+                <div className="w-1.5 h-px bg-border shrink-0" />
+                <div className="h-8 min-w-[85px] px-2 flex items-center justify-center rounded-md border border-border bg-background text-[10px] font-bold text-foreground shadow-sm">
                   {internalDate?.to ? format(internalDate.to, "dd MMM yy") : "—"}
                 </div>
               </div>

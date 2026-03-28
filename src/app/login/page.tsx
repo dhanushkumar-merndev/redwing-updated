@@ -44,16 +44,16 @@ export default function LoginPage() {
             <img
               src="/image.webp"
               alt="Tansi Motors Logo"
-              className="h-18 w-18 rounded-lg object-contain"
+              className="h-18 w-18 md:h-20 md:w-20 rounded-lg object-contain"
             />
             <div>
-              <CardTitle className="text-xl font-bold text-zinc-900">TANSI MOTORS</CardTitle>
-              <CardDescription className="text-xs font-medium tracking-widest text-zinc-500">
+              <CardTitle className="text-xl font-bold text-primary/90">TANSI MOTORS</CardTitle>
+              <CardDescription className="text-xs font-medium tracking-widest text-muted-foreground">
                 HIRING DASHBOARD
               </CardDescription>
             </div>
           </div>
-          <p className="text-sm text-zinc-500">Enter your password to access the dashboard</p>
+          <p className="text-sm text-muted-foreground">Enter your password to access the dashboard</p>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -69,12 +69,12 @@ export default function LoginPage() {
                 autoFocus
               />
               {error && (
-                <p className="text-sm font-medium text-red-600">{error}</p>
+                <p className="text-sm font-medium text-destructive">{error}</p>
               )}
             </div>
             <Button
               type="submit"
-              className="w-full h-11 bg-primary text-white hover:bg-primary/80"
+              className="w-full h-11 bg-primary text-primary-foreground hover:bg-primary/80"
               disabled={isPending || !password}
             >
               {isPending ? "Signing in..." : "Sign In"}

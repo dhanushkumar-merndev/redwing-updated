@@ -78,7 +78,7 @@ export default function FilterBar({
   
   {/* 🔍 Search Icon */}
   <svg
-    className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-zinc-400"
+    className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
     fill="none"
     stroke="currentColor"
     viewBox="0 0 24 24"
@@ -96,7 +96,7 @@ export default function FilterBar({
     <button
       type="button"
       onClick={() => onSearchChange("")}
-      className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 active:scale-95 transition-all"
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground active:scale-95 transition-all"
     >
       <svg
         className="h-3.5 w-3.5"
@@ -119,7 +119,7 @@ export default function FilterBar({
     placeholder="Quick search..."
     value={searchQuery}
     onChange={(e) => onSearchChange(e.target.value)}
-    className="h-10 w-full pl-9 pr-9 text-sm rounded-xl border-zinc-200 bg-white focus:ring-0 focus:border-zinc-300"
+    className="h-10 w-full pl-9 pr-9 text-sm rounded-xl border-border bg-background focus:ring-0 focus:border-border/80 shadow-premium/50"
   />
 </div>
       {/* Filter Popover */}
@@ -128,7 +128,7 @@ export default function FilterBar({
           disabled
           className={cn(
             buttonVariants({ variant: "outline" }),
-            "h-10 px-4 rounded-xl border-zinc-200 opacity-50 flex items-center gap-2"
+            "h-10 px-4 rounded-xl border-border opacity-50 flex items-center gap-2"
           )}
         >
           <svg className="h-4 w-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,11 +141,11 @@ export default function FilterBar({
           <PopoverTrigger
             className={cn(
               buttonVariants({ variant: "outline" }),
-              "h-10 px-4 rounded-xl border-zinc-200 font-semibold text-xs flex items-center gap-2 hover:bg-zinc-50"
+              "h-10 px-4 rounded-xl border-border font-semibold text-xs flex items-center gap-2 hover:bg-muted shadow-premium transition-all duration-300"
             )}
           >
             <svg
-              className="h-4 w-4 text-zinc-600"
+              className="h-4 w-4 text-muted-foreground"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -164,13 +164,13 @@ export default function FilterBar({
               </span>
             )}
           </PopoverTrigger>
-          <PopoverContent className="w-72 p-4 rounded-2xl shadow-xl border-zinc-100" align="end" sideOffset={8}>
+          <PopoverContent className="w-72 p-4 rounded-2xl shadow-xl border-border/50" align="end" sideOffset={8}>
             <div className="space-y-4">
               <div className="space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Sort Mechanism</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Sort Mechanism</p>
                 <div className="flex items-center gap-2">
                   <Select value={sortField} onValueChange={(v) => v && onSortFieldChange(v as SortField)}>
-                    <SelectTrigger className="h-9 flex-1 text-xs rounded-lg border-zinc-200">
+                    <SelectTrigger className="h-9 flex-1 text-xs rounded-lg border-border">
                       <SelectValue placeholder="Sort by" />
                     </SelectTrigger>
                     <SelectContent>
@@ -183,7 +183,7 @@ export default function FilterBar({
                   </Select>
                   <Button
                     variant="outline"
-                    className="h-9 px-2 rounded-lg border-zinc-200 flex items-center gap-1.5 min-w-[70px]"
+                    className="h-9 px-2 rounded-lg border-border flex items-center gap-1.5 min-w-[70px]"
                     onClick={() => onSortOrderChange(sortOrder === "asc" ? "desc" : "asc")}
                   >
                     <span className="text-[10px] font-bold uppercase tracking-tighter">
@@ -200,12 +200,12 @@ export default function FilterBar({
                 </div>
               </div>
 
-              <Separator className="bg-zinc-100" />
+              <Separator className="bg-border/50" />
 
               <div className="space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Filter By Status</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Filter By Status</p>
                 <Select value={activeStatus} onValueChange={(v) => v && onStatusChange(v as ApplicantStatus | "all")}>
-                  <SelectTrigger className="h-9 w-full text-xs rounded-lg border-zinc-200">
+                  <SelectTrigger className="h-9 w-full text-xs rounded-lg border-border">
                     <SelectValue placeholder="Filter by status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -218,12 +218,12 @@ export default function FilterBar({
                 </Select>
               </div>
 
-              <Separator className="bg-zinc-100" />
+              <Separator className="bg-border/50" />
 
               <div className="space-y-2">
-                <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Filter by Role</p>
+                <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Filter by Role</p>
                 <Select value={selectedRole} onValueChange={(v) => v && onRoleChange(v as Role | "all")}>
-                  <SelectTrigger className="h-9 w-full text-xs rounded-lg border-zinc-200">
+                  <SelectTrigger className="h-9 w-full text-xs rounded-lg border-border">
                     <SelectValue placeholder="Filter role" />
                   </SelectTrigger>
                   <SelectContent>
@@ -249,7 +249,7 @@ export default function FilterBar({
                 >
                   Reset all
                 </button>
-                <p className="text-[10px] text-zinc-400">
+                <p className="text-[10px] text-muted-foreground">
                   {activeFiltersCount} active
                 </p>
               </div>

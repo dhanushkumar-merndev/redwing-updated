@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { AnimatePresence, motion, type Variants } from "framer-motion";
+import { AnimatePresence, LayoutGroup, motion, type Variants } from "framer-motion";
 import Header from "@/components/dashboard/Header";
 import StatsRow from "@/components/dashboard/StatsRow";
 import AnalyticsSection from "@/components/dashboard/AnalyticsSection";
@@ -18,6 +18,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { resizeLenis, scrollToPosition } from "@/lib/lenis";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { getFromDB } from "@/lib/db";
+import { decryptName } from "@/lib/crypto";
 
 const ITEMS_PER_PAGE = 12;
 
@@ -44,6 +46,36 @@ export default function DashboardPage() {
   const [displayLimit, setDisplayLimit] = useState(ITEMS_PER_PAGE);
   const [activeMobileView, setActiveMobileView] = useState<"dashboard" | "applicants">("dashboard");
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  
+  // -- Identity & Motivation --
+  const [userName, setUserName] = useState<string>("User");
+  const [quoteIndex, setQuoteIndex] = useState(0);
+  const quotes = useMemo(() => [
+    "Manage your applicant pipeline and track performance.",
+    "The secret of getting ahead is getting started.",
+    "Opportunities don't happen, you create them.",
+    "The only way to do great work is to love what you do.",
+    "Don't count the days, make the days count.",
+    "Focus on your goals, everything else is just noise."
+  ], []);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const encrypted = await getFromDB();
+      if (encrypted) {
+        const decrypted = await decryptName(encrypted);
+        if (decrypted) setUserName(decrypted);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setQuoteIndex((prev) => (prev + 1) % quotes.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [quotes]);
 
   useEffect(() => {
     fetchApplicants(() => setLastUpdated(new Date()));
@@ -145,12 +177,48 @@ export default function DashboardPage() {
     onStatusChange: (s: ApplicantStatus | "all") => handleFilterChange(() => setActiveStatus(s)),
   };
 
-  const WelcomeHeader = (
-    <motion.div variants={fadeUp(0)} initial="hidden" animate="visible">
-      <h2 className="text-xl font-bold tracking-tight text-zinc-900 md:text-2xl">Welcome Back</h2>
-      <p className="text-sm text-zinc-500">Manage your applicant pipeline and track performance.</p>
-    </motion.div>
-  );
+  const WelcomeHeader = useMemo(() => {
+    const hour = new Date().getHours();
+    let greeting = "Good Evening";
+    
+    if (hour < 12) {
+      greeting = "Good Morning";
+    } else if (hour < 17) {
+      greeting = "Good Afternoon";
+    }
+
+    return (
+      <motion.div 
+        variants={fadeUp(0)} 
+        initial="hidden" 
+        animate="visible"
+        className="space-y-1.5"
+      >
+        <div className="flex items-center gap-2">
+          <motion.h2 
+            className="text-xl font-bold tracking-tight text-foreground md:text-3xl"
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+          >
+            {greeting}, {userName}
+          </motion.h2>
+        </div>
+        <AnimatePresence mode="wait">
+          <motion.p 
+            key={quoteIndex}
+            className="text-sm text-muted-foreground md:text-base font-medium max-w-sm h-6"
+            initial={{ opacity: 0, y: 5 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -5 }}
+            transition={{ duration: 0.4 }}
+          >
+            {quotes[quoteIndex]}
+          </motion.p>
+        </AnimatePresence>
+      </motion.div>
+    );
+  }, [userName, quoteIndex, quotes]);
 
   const DashboardContent = (
     <div className="space-y-4 md:space-y-8">
@@ -163,7 +231,7 @@ export default function DashboardPage() {
             setTimeout(() => resizeLenis(), 50);
             setTimeout(() => scrollToPosition(0), 100);
           }}
-          className="w-full h-14 bg-primary text-white rounded-2xl font-bold shadow-xl active:scale-95 transition-all text-sm flex items-center justify-center gap-2 group mb-6"
+          className="w-full h-10 bg-primary text-primary-foreground rounded-2xl font-bold shadow-xl active:scale-95 transition-all text-sm flex items-center justify-center gap-2 group mb-6"
         >
           View Applicant Database
           <svg className="h-4 w-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -182,15 +250,15 @@ export default function DashboardPage() {
             variant="ghost"
             size="sm"
             onClick={() => setActiveMobileView("dashboard")}
-            className="rounded-xl h-9 px-0 text-zinc-500 hover:text-zinc-900 hover:bg-transparent"
+            className="rounded-xl h-9 px-0 text-muted-foreground hover:text-foreground hover:bg-transparent"
           >
             <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
             </svg>
             Back to Overview
           </Button>
-          <div className="h-4 w-px bg-zinc-200" />
-          <h3 className="text-sm font-bold text-zinc-900">Applicant Database</h3>
+          <div className="h-4 w-px bg-border" />
+          <h3 className="text-sm font-bold text-foreground">Applicant Database</h3>
         </div>
       )}
 
@@ -226,7 +294,7 @@ export default function DashboardPage() {
           {applicants.length === 0 && isPending ? (
             <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 md:gap-4">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className="rounded-3xl border border-zinc-200 bg-white p-4 space-y-4">
+                <div key={i} className="rounded-3xl border border-border bg-card p-4 space-y-4">
                   <div className="flex justify-between items-start">
                     <div className="space-y-2.5 flex-1">
                       <Skeleton className="h-5 w-3/4 rounded-lg" />
@@ -237,7 +305,7 @@ export default function DashboardPage() {
                     </div>
                     <Skeleton className="h-6 w-20 rounded-full" />
                   </div>
-                  <div className="bg-zinc-50/50 rounded-2xl p-2.5 space-y-2">
+                  <div className="bg-background rounded-2xl p-2.5 space-y-2">
                     <Skeleton className="h-10 w-full rounded-xl" />
                     <Skeleton className="h-10 w-full rounded-xl" />
                   </div>
@@ -249,33 +317,35 @@ export default function DashboardPage() {
               ))}
             </motion.div>
           ) : filteredApplicants.length === 0 ? (
-            <motion.div key="empty" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="flex h-[450px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-zinc-200 bg-white/50 backdrop-blur-sm">
-              <div className="rounded-full bg-zinc-100 p-4 mb-4">
-                <svg className="h-8 w-8 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <motion.div key="empty" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="flex h-[450px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-card backdrop-blur-sm">
+              <div className="rounded-full bg-accent p-4 mb-4">
+                <svg className="h-8 w-8 text-accent-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                 </svg>
               </div>
-              <p className="text-base font-bold text-zinc-900">No applicants found</p>
-              <p className="text-sm text-zinc-500 mt-1 max-w-[250px] text-center">We couldn&apos;t find any results matching your search or filters.</p>
-              <button onClick={() => handleFilterChange(() => { setActiveStatus("all"); setSelectedRole("all"); setSearchQuery(""); })} className="mt-6 rounded-full bg-zinc-900 px-6 py-2 text-xs font-bold text-white transition-transform active:scale-95 hover:bg-zinc-800">
+              <p className="text-base font-bold text-foreground">No applicants found</p>
+              <p className="text-sm text-muted-foreground mt-1 max-w-[250px] text-center">We couldn&apos;t find any results matching your search or filters.</p>
+              <button onClick={() => handleFilterChange(() => { setActiveStatus("all"); setSelectedRole("all"); setSearchQuery(""); })} className="mt-6 rounded-full bg-primary px-6 py-2 text-xs font-bold text-primary-foreground transition-transform active:scale-95 hover:bg-primary/80">
                 Clear all filters
               </button>
             </motion.div>
           ) : (
             <motion.div key="results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 md:gap-4">
-                <AnimatePresence mode="popLayout" initial={false}>
-                  {filteredApplicants.slice(0, displayLimit).map((applicant, i) => (
-                    <ApplicantCard key={applicant.id} applicant={applicant} onSave={saveApplicant} isPending={isPending} index={i} />
-                  ))}
-                </AnimatePresence>
-              </div>
+              <LayoutGroup>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 md:gap-4">
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    {filteredApplicants.slice(0, displayLimit).map((applicant, i) => (
+                      <ApplicantCard key={applicant.id} applicant={applicant} onSave={saveApplicant} isPending={isPending} index={i} />
+                    ))}
+                  </AnimatePresence>
+                </div>
+              </LayoutGroup>
               {filteredApplicants.length > displayLimit && (
                 <div className="flex items-center justify-center gap-3 pt-6 flex-col sm:flex-row">
-                  <Button variant="outline" onClick={() => setDisplayLimit(prev => prev + ITEMS_PER_PAGE)} className="w-full sm:w-auto font-bold text-xs px-8 rounded-full h-10 transition-all hover:bg-zinc-900 hover:text-white">
+                  <Button variant="outline" onClick={() => setDisplayLimit(prev => prev + ITEMS_PER_PAGE)} className="w-full sm:w-auto font-bold text-xs px-8 rounded-full h-10 transition-all bg-secondary! hover:text-secondary-foreground! cursor-pointer">
                     Load More ({filteredApplicants.length - displayLimit} left)
                   </Button>
-                  <Button variant="ghost" onClick={() => setDisplayLimit(filteredApplicants.length)} className="w-full sm:w-auto font-bold text-xs px-8 rounded-full h-10 transition-all hover:bg-zinc-100">
+                  <Button variant="ghost" onClick={() => setDisplayLimit(filteredApplicants.length)} className="w-full sm:w-auto font-bold text-xs px-8 rounded-full h-10 transition-all bg-primary! text-primary-foreground! cursor-pointer hover:bg-primary/80!">
                     View All Applicants
                   </Button>
                 </div>
@@ -288,7 +358,7 @@ export default function DashboardPage() {
   );
 
   return (
-    <div className="flex min-h-screen flex-col bg-zinc-50 pb-20">
+    <div className="flex min-h-screen flex-col bg-background selection:bg-primary/10 selection:text-primary">
       <UserRegistrationDialog />
       <Header 
         onRefresh={() => fetchApplicants(() => setLastUpdated(new Date()))} 
@@ -299,37 +369,45 @@ export default function DashboardPage() {
       <main className="mx-auto w-full max-w-7xl px-4 py-4 space-y-4 md:px-6 md:py-8 md:space-y-8">
         {mounted && isDesktop && WelcomeHeader}
 
-        {isDesktop ? (
-          <>
-            {DashboardContent}
-            {ApplicantsListContent}
-          </>
+        {mounted ? (
+          isDesktop ? (
+            <>
+              {DashboardContent}
+              {ApplicantsListContent}
+            </>
+          ) : (
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeMobileView}
+                initial={{ 
+                  opacity: 0, 
+                  scale: 0.99
+                }}
+                animate={{ 
+                  opacity: 1, 
+                  scale: 1
+                }}
+                exit={{ 
+                  opacity: 0, 
+                  scale: 0.99
+                }}
+                transition={{ 
+                  type: "spring",
+                  damping: 30,
+                  stiffness: 250,
+                  mass: 0.5
+                }}
+              >
+                {activeMobileView === "dashboard" ? DashboardContent : ApplicantsListContent}
+              </motion.div>
+            </AnimatePresence>
+          )
         ) : (
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={activeMobileView}
-              initial={{ 
-                opacity: 0, 
-                scale: 0.99
-              }}
-              animate={{ 
-                opacity: 1, 
-                scale: 1
-              }}
-              exit={{ 
-                opacity: 0, 
-                scale: 0.99
-              }}
-              transition={{ 
-                type: "spring",
-                damping: 30, // Slightly tighter damping for faster fade
-                stiffness: 250,
-                mass: 0.5
-              }}
-            >
-              {activeMobileView === "dashboard" ? DashboardContent : ApplicantsListContent}
-            </motion.div>
-          </AnimatePresence>
+          <div className="space-y-8 animate-pulse">
+            <div className="h-32 bg-muted/50 rounded-3xl" />
+            <div className="h-64 bg-muted/50 rounded-3xl" />
+            <div className="h-96 bg-muted/50 rounded-3xl" />
+          </div>
         )}
       </main>
     </div>

@@ -54,6 +54,8 @@
   --shadow-lg: 0 10px 15px -3px hsl(0 0% 0% / 0.10), 0 4px 6px -4px hsl(0 0% 0% / 0.10);
   --shadow-xl: 0 20px 25px -5px hsl(0 0% 0% / 0.10), 0 8px 10px -6px hsl(0 0% 0% / 0.10);
   --shadow-2xl: 0 25px 50px -12px hsl(0 0% 0% / 0.25);
+  --shadow-premium: 0 20px 50px -12px oklch(0 0 0 / 0.03), 0 10px 30px -10px oklch(0 0 0 / 0.02);
+  --shadow-premium-hover: 0 30px 60px -12px oklch(0 0 0 / 0.05), 0 15px 40px -10px oklch(0 0 0 / 0.03);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
 }
@@ -109,6 +111,8 @@
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
   --shadow-2xl: var(--shadow-2xl);
+  --shadow-premium: var(--shadow-premium);
+  --shadow-premium-hover: var(--shadow-premium-hover);
 }
 
 @layer base {
@@ -120,10 +124,9 @@
     font-feature-settings: "ss01", "ss03", "cv01", "cv03", "cv04";
   }
 
-  /* Lenis scroll performance fix */
-  html.lenis-scrolling, 
-  html.lenis-scrolling * {
-    pointer-events: none !important;
+  /* Prevent highlight color on mobile taps for specific components */
+  .no-tap-highlight {
+    -webkit-tap-highlight-color: transparent;
   }
 
   .custom-scrollbar::-webkit-scrollbar {
@@ -133,7 +136,7 @@
     background: transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-zinc-200 rounded-full hover:bg-zinc-300 transition-colors;
+    @apply bg-border rounded-full hover:bg-ring transition-colors;
   }
 
   /* Remove all focus outlines and tap highlights from chart elements */

@@ -1,17 +1,20 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-
-const emptySubscribe = () => () => {};
+import { useState, useEffect } from "react";
 
 /**
  * A hook that returns true if the component is mounted on the client.
- * This is the modern, non-warning-triggering way to handle hydration checks in React 18+.
+ * Using a simple state-based check is the safest way to ensure that 
+ * server rendering and the FIRST client render match (both being false).
  */
 export function useMounted() {
-  return useSyncExternalStore(
-    emptySubscribe,
-    () => true,
-    () => false
-  );
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+
+    setMounted(true);
+    
+  }, []);
+
+  return mounted;
 }
