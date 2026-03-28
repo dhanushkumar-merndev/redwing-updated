@@ -43,9 +43,11 @@ export default function DashboardPage() {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [displayLimit, setDisplayLimit] = useState(ITEMS_PER_PAGE);
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const [activeMobileView, setActiveMobileView] = useState<"dashboard" | "applicants">("dashboard");
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   useEffect(() => {
-    fetchApplicants();
+    fetchApplicants(() => setLastUpdated(new Date()));
   }, [fetchApplicants]);
 
   useEffect(() => {
@@ -135,220 +137,193 @@ export default function DashboardPage() {
     onStatusChange: (s: ApplicantStatus | "all") => handleFilterChange(() => setActiveStatus(s)),
   };
 
-  return (
-    <div className="flex min-h-screen flex-col bg-zinc-50 pb-20">
-      <Header onRefresh={fetchApplicants} isPending={isPending} />
+  const WelcomeHeader = (
+    <motion.div variants={fadeUp(0)} initial="hidden" animate="visible">
+      <h2 className="text-xl font-bold tracking-tight text-zinc-900 md:text-2xl">Welcome Back</h2>
+      <p className="text-sm text-zinc-500">Manage your applicant pipeline and track performance.</p>
+    </motion.div>
+  );
 
-      <main className="mx-auto w-full max-w-7xl px-4 py-4 space-y-4 md:px-6 md:py-8 md:space-y-8">
+  const DashboardContent = (
+    <div className="space-y-4 md:space-y-8">
+      <StatsRow stats={stats} />
+      <AnalyticsSection applicants={applicants} />
+      {mounted && !isDesktop && (
+        <Button
+          onClick={() => setActiveMobileView("applicants")}
+          className="w-full h-14 bg-primary text-white rounded-2xl font-bold shadow-xl active:scale-95 transition-all text-sm flex items-center justify-center gap-2 group mb-6"
+        >
+          View Applicant Database
+          <svg className="h-4 w-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+          </svg>
+        </Button>
+      )}
+    </div>
+  );
 
-        {/* Welcome — desktop only */}
-        {mounted && isDesktop && (
-          <motion.div
-            variants={fadeUp(0)}
-            initial="hidden"
-            animate="visible"
+  const ApplicantsListContent = (
+    <div className="space-y-4 md:space-y-6">
+      {mounted && !isDesktop && (
+        <div className="flex items-center gap-3 mb-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setActiveMobileView("dashboard")}
+            className="rounded-xl h-9 px-0 text-zinc-500 hover:text-zinc-900 hover:bg-transparent"
           >
-            <h2 className="text-xl font-bold tracking-tight text-zinc-900 md:text-2xl">Welcome Back</h2>
-            <p className="text-sm text-zinc-500">Manage your applicant pipeline and track performance.</p>
-          </motion.div>
-        )}
+            <svg className="h-4 w-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Overview
+          </Button>
+          <div className="h-4 w-px bg-zinc-200" />
+          <h3 className="text-sm font-bold text-zinc-900">Applicant Database</h3>
+        </div>
+      )}
 
-        {/* Stats */}
-        <motion.div
-          variants={fadeUp(isDesktop ? 0.1 : 0)}
-          initial="hidden"
-          animate="visible"
-        >
-          <StatsRow stats={stats} />
+      {mounted && isDesktop ? (
+        <motion.div key="desktop-filters" className="flex flex-row items-end justify-between gap-3" variants={fadeUp(0.3)} initial="hidden" animate="visible">
+          <DepartmentTabs {...departmentTabsProps} />
+          <FilterBar
+            department={activeDepartment}
+            searchQuery={searchQuery}
+            onSearchChange={(q) => handleFilterChange(() => setSearchQuery(q))}
+            selectedRole={selectedRole}
+            onRoleChange={(r) => handleFilterChange(() => setSelectedRole(r))}
+            sortField={sortField}
+            onSortFieldChange={(f) => handleFilterChange(() => setSortField(f))}
+            sortOrder={sortOrder}
+            onSortOrderChange={(o) => handleFilterChange(() => setSortOrder(o))}
+          />
         </motion.div>
-
-        {/* Analytics */}
-        <motion.div
-          variants={fadeUp(isDesktop ? 0.2 : 0.05)}
-          initial="hidden"
-          animate="visible"
-        >
-          <AnalyticsSection applicants={applicants} />
-        </motion.div>
-
-        <div className="space-y-4 md:space-y-6">
-          {mounted && isDesktop ? (
-            <motion.div
-              key="desktop-filters"
-              className="flex flex-row items-end justify-between gap-3"
-              variants={fadeUp(0.3)}
-              initial="hidden"
-              animate="visible"
-            >
-              <DepartmentTabs {...departmentTabsProps} />
-              <FilterBar
-                department={activeDepartment}
-                searchQuery={searchQuery}
-                onSearchChange={(q) => handleFilterChange(() => setSearchQuery(q))}
-                selectedRole={selectedRole}
-                onRoleChange={(r) => handleFilterChange(() => setSelectedRole(r))}
-                sortField={sortField}
-                onSortFieldChange={(f) => handleFilterChange(() => setSortField(f))}
-                sortOrder={sortOrder}
-                onSortOrderChange={(o) => handleFilterChange(() => setSortOrder(o))}
+      ) : (
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1">
+              <svg className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                placeholder="Search leads..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="h-11 w-full pl-10 pr-10 text-sm font-medium rounded-xl border-none bg-white shadow-sm ring-1 ring-zinc-200 focus:ring-2 focus:ring-primary/20 transition-all"
               />
+              {searchQuery && (
+                <button type="button" onClick={() => setSearchQuery("")} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400">
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+            <Button variant="outline" size="icon" onClick={() => setIsFiltersOpen(true)} className="h-11 w-11 rounded-xl border-zinc-200 bg-white shadow-sm">
+              <svg className="h-4.5 w-4.5 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+            </Button>
+          </div>
+          <DepartmentTabs {...departmentTabsProps} />
+        </div>
+      )}
+
+      <div className="min-h-[600px] relative">
+        <AnimatePresence mode="wait">
+          {applicants.length === 0 && isPending ? (
+            <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 md:gap-4">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="rounded-3xl border border-zinc-200 bg-white p-4 space-y-4">
+                  <div className="flex justify-between items-start">
+                    <div className="space-y-2.5 flex-1">
+                      <Skeleton className="h-5 w-3/4 rounded-lg" />
+                      <div className="flex items-center gap-1.5">
+                        <Skeleton className="h-3 w-8 rounded-md" />
+                        <Skeleton className="h-3 w-16 rounded-md" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-6 w-20 rounded-full" />
+                  </div>
+                  <div className="bg-zinc-50/50 rounded-2xl p-2.5 space-y-2">
+                    <Skeleton className="h-10 w-full rounded-xl" />
+                    <Skeleton className="h-10 w-full rounded-xl" />
+                  </div>
+                  <div className="flex gap-2 pt-1">
+                    <Skeleton className="h-9 flex-1 rounded-xl" />
+                    <Skeleton className="h-9 w-24 rounded-xl" />
+                  </div>
+                </div>
+              ))}
+            </motion.div>
+          ) : filteredApplicants.length === 0 ? (
+            <motion.div key="empty" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.98 }} className="flex h-[450px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-zinc-200 bg-white/50 backdrop-blur-sm">
+              <div className="rounded-full bg-zinc-100 p-4 mb-4">
+                <svg className="h-8 w-8 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <p className="text-base font-bold text-zinc-900">No applicants found</p>
+              <p className="text-sm text-zinc-500 mt-1 max-w-[250px] text-center">We couldn&apos;t find any results matching your search or filters.</p>
+              <button onClick={() => handleFilterChange(() => { setActiveStatus("all"); setSelectedRole("all"); setSearchQuery(""); })} className="mt-6 rounded-full bg-zinc-900 px-6 py-2 text-xs font-bold text-white transition-transform active:scale-95 hover:bg-zinc-800">
+                Clear all filters
+              </button>
             </motion.div>
           ) : (
-            <motion.div
-              key="mobile-filters"
-              className="flex flex-col gap-4"
-              variants={fadeUp(0.1)}
-              initial="hidden"
-              animate="visible"
-            >
-              <div className="flex items-center gap-2">
-                <div className="relative flex-1">
-                  <svg
-                    className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                  </svg>
-                  <input
-                    type="text"
-                    placeholder="Search leads..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-11 w-full pl-10 pr-10 text-sm font-medium rounded-xl border-none bg-white shadow-sm ring-1 ring-zinc-200 focus:ring-2 focus:ring-primary/20 transition-all"
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setSearchQuery("")}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 active:scale-95 transition-all outline-none"
-                    >
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => setIsFiltersOpen(true)}
-                  className="h-11 w-11 rounded-xl border-zinc-200 bg-white shadow-sm transition-all active:scale-95"
-                >
-                  <svg className="h-4.5 w-4.5 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                  </svg>
-                </Button>
+            <motion.div key="results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 md:gap-4">
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {filteredApplicants.slice(0, displayLimit).map((applicant, i) => (
+                    <ApplicantCard key={applicant.id} applicant={applicant} onSave={saveApplicant} isPending={isPending} index={i} />
+                  ))}
+                </AnimatePresence>
               </div>
-              <DepartmentTabs {...departmentTabsProps} />
+              {filteredApplicants.length > displayLimit && (
+                <div className="flex items-center justify-center gap-3 pt-6 flex-col sm:flex-row">
+                  <Button variant="outline" onClick={() => setDisplayLimit(prev => prev + ITEMS_PER_PAGE)} className="w-full sm:w-auto font-bold text-xs px-8 rounded-full h-10 transition-all hover:bg-zinc-900 hover:text-white">
+                    Load More ({filteredApplicants.length - displayLimit} left)
+                  </Button>
+                  <Button variant="ghost" onClick={() => setDisplayLimit(filteredApplicants.length)} className="w-full sm:w-auto font-bold text-xs px-8 rounded-full h-10 transition-all hover:bg-zinc-100">
+                    View All Applicants
+                  </Button>
+                </div>
+              )}
             </motion.div>
           )}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
 
-          {/* Applicant Grid */}
-          <div className="min-h-[600px] relative">
-            <AnimatePresence mode="wait">
-              {applicants.length === 0 && isPending ? (
-                <motion.div
-                  key="loading"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 md:gap-4"
-                >
-                  {[...Array(6)].map((_, i) => (
-                    <div key={i} className="rounded-3xl border border-zinc-200 bg-white p-4 space-y-4">
-                      <div className="flex justify-between items-start">
-                        <div className="space-y-2.5 flex-1">
-                          <Skeleton className="h-5 w-3/4 rounded-lg" />
-                          <div className="flex items-center gap-1.5">
-                            <Skeleton className="h-3 w-8 rounded-md" />
-                            <Skeleton className="h-3 w-16 rounded-md" />
-                          </div>
-                        </div>
-                        <Skeleton className="h-6 w-20 rounded-full" />
-                      </div>
-                      <div className="bg-zinc-50/50 rounded-2xl p-2.5 space-y-2">
-                        <Skeleton className="h-10 w-full rounded-xl" />
-                        <Skeleton className="h-10 w-full rounded-xl" />
-                      </div>
-                      <div className="flex gap-2 pt-1">
-                        <Skeleton className="h-9 flex-1 rounded-xl" />
-                        <Skeleton className="h-9 w-24 rounded-xl" />
-                      </div>
-                    </div>
-                  ))}
-                </motion.div>
-              ) : filteredApplicants.length === 0 ? (
-                <motion.div
-                  key="empty"
-                  initial={{ opacity: 0, scale: 0.98 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.98 }}
-                  className="flex h-[450px] flex-col items-center justify-center rounded-2xl border-2 border-dashed border-zinc-200 bg-white/50 backdrop-blur-sm"
-                >
-                  <div className="rounded-full bg-zinc-100 p-4 mb-4">
-                    <svg className="h-8 w-8 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                  </div>
-                  <p className="text-base font-bold text-zinc-900">No applicants found</p>
-                  <p className="text-sm text-zinc-500 mt-1 max-w-[250px] text-center">We couldn&apos;t find any results matching your search or filters.</p>
-                  <button
-                    onClick={() => handleFilterChange(() => {
-                      setActiveStatus("all");
-                      setSelectedRole("all");
-                      setSearchQuery("");
-                    })}
-                    className="mt-6 rounded-full bg-zinc-900 px-6 py-2 text-xs font-bold text-white transition-transform active:scale-95 hover:bg-zinc-800"
-                  >
-                    Clear all filters
-                  </button>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="results"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="space-y-6"
-                >
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 md:gap-4">
-                    <AnimatePresence mode="popLayout" initial={false}>
-                      {filteredApplicants.slice(0, displayLimit).map((applicant, i) => (
-                        <ApplicantCard
-                          key={applicant.id}
-                          applicant={applicant}
-                          onSave={saveApplicant}
-                          isPending={isPending}
-                          index={i}
-                        />
-                      ))}
-                    </AnimatePresence>
-                  </div>
-                  {filteredApplicants.length > displayLimit && (
-                    <div className="flex items-center justify-center gap-3 pt-6 flex-col sm:flex-row">
-                      <Button
-                        variant="outline"
-                        onClick={() => setDisplayLimit(prev => prev + ITEMS_PER_PAGE)}
-                        className="w-full sm:w-auto font-bold text-xs px-8 rounded-full h-10 transition-all hover:bg-zinc-900 hover:text-white"
-                      >
-                        Load More ({filteredApplicants.length - displayLimit} left)
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={() => setDisplayLimit(filteredApplicants.length)}
-                        className="w-full sm:w-auto font-bold text-xs px-8 rounded-full h-10 transition-all hover:bg-zinc-100"
-                      >
-                        View All Applicants
-                      </Button>
-                    </div>
-                  )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        </div>
+  return (
+    <div className="flex min-h-screen flex-col bg-zinc-50 pb-20">
+      <Header 
+        onRefresh={() => fetchApplicants(() => setLastUpdated(new Date()))} 
+        isPending={isPending} 
+        lastUpdated={lastUpdated}
+      />
+
+      <main className="mx-auto w-full max-w-7xl px-4 py-4 space-y-4 md:px-6 md:py-8 md:space-y-8">
+        {mounted && isDesktop && WelcomeHeader}
+
+        {isDesktop ? (
+          <>
+            {DashboardContent}
+            {ApplicantsListContent}
+          </>
+        ) : (
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeMobileView}
+              initial={{ opacity: 0, x: activeMobileView === "dashboard" ? -10 : 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: activeMobileView === "dashboard" ? 10 : -10 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+            >
+              {activeMobileView === "dashboard" ? DashboardContent : ApplicantsListContent}
+            </motion.div>
+          </AnimatePresence>
+        )}
       </main>
 
       <MobileFilters

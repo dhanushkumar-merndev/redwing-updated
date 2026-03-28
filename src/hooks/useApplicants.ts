@@ -7,16 +7,18 @@ export const useApplicants = () => {
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [isPending, startTransition] = useTransition();
 
-  const fetchApplicants = useCallback(() => {
+  const fetchApplicants = useCallback((onComplete?: () => void) => {
     startTransition(async () => {
       try {
         const res = await fetch("/api/applicants");
-        if (!res.ok) return;
-        const data = (await res.json()) as { applicants: Applicant[] };
-        setApplicants(data.applicants ?? []);
+        if (res.ok) {
+          const data = (await res.json()) as { applicants: Applicant[] };
+          setApplicants(data.applicants ?? []);
+        }
       } catch {
         // Network or parse error — keep current state
       }
+      onComplete?.();
     });
   }, []);
 

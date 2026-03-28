@@ -9,17 +9,17 @@ import { useMounted } from "@/hooks/useMounted";
 interface HeaderProps {
   onRefresh: () => void;
   isPending: boolean;
+  lastUpdated: Date;
 }
 
-export default function Header({ onRefresh, isPending }: HeaderProps) {
-  const [clock, setClock] = useState("");
+export default function Header({ onRefresh, isPending, lastUpdated }: HeaderProps) {
   const mounted = useMounted();
+  const [clock, setClock] = useState("");
 
   useEffect(() => {
     const update = () => {
-      const now = new Date();
       setClock(
-        now.toLocaleTimeString("en-US", {
+        lastUpdated.toLocaleTimeString("en-US", {
           hour: "2-digit",
           minute: "2-digit",
           hour12: true,
@@ -27,11 +27,7 @@ export default function Header({ onRefresh, isPending }: HeaderProps) {
       );
     };
     update();
-    const interval = setInterval(update, 60000);
-    return () => {
-      clearInterval(interval);
-    };
-  }, []);
+  }, [lastUpdated]);
 
   return (
     <motion.header
