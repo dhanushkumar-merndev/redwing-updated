@@ -33,14 +33,14 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50">
-      <Card className="w-full max-w-md shadow-xl">
+    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 ">
+      <Card className="w-full max-w-md shadow-xl pt-12 pb-6">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex items-center gap-3">
+          <div className="mx-auto mb-4 flex items-center gap-3 flex-col">
             <img
               src="/image.webp"
               alt="Tansi Motors Logo"
-              className="h-12 w-12 rounded-lg object-contain"
+              className="h-18 w-18 rounded-lg object-contain"
             />
             <div>
               <CardTitle className="text-xl font-bold text-zinc-900">TANSI MOTORS</CardTitle>
@@ -70,7 +70,7 @@ export default function LoginPage() {
             </div>
             <Button
               type="submit"
-              className="w-full h-11 bg-zinc-900 text-white hover:bg-zinc-800"
+              className="w-full h-11 bg-primary text-white hover:bg-zinc-800"
               disabled={isPending || !password}
             >
               {isPending ? "Signing in..." : "Sign In"}
