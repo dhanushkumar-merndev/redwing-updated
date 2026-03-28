@@ -44,33 +44,35 @@ export function DatePickerWithRange({
       id="date-range-picker-trigger"
       variant="outline"
       className={cn(
-        "h-7 justify-start text-left font-bold border-zinc-200 bg-white hover:bg-zinc-50 transition-colors shadow-none text-[10px] md:h-8 md:text-xs px-2.5",
+        "h-7 justify-between text-left font-bold border-zinc-200 bg-white hover:bg-zinc-50 transition-colors shadow-none text-[10px] md:h-8 md:text-xs px-2.5",
         !date && "text-muted-foreground",
         className
       )}
       suppressHydrationWarning
     >
       <CalendarIcon className="mr-1.5 h-3 w-3 text-zinc-400" />
+
       {date?.from ? (
         date.to ? (
           <>
-            {format(date.from, "LLL dd")} - {format(date.to, "LLL dd")}
+            {format(date.from, "LLL dd yyyy")} - {format(date.to, "LLL dd yyyy")}
           </>
         ) : (
-          format(date.from, "LLL dd")
+          format(date.from, "LLL dd yyyy")
         )
       ) : (
         <span>Pick range</span>
       )}
+     
       <ChevronDown className="ml-1.5 h-3 w-3 text-zinc-400 group-data-[state=open]:rotate-180 transition-transform" />
-    </Button>
+  </Button>
   )
 
   return (
     <div className={cn("grid gap-2", className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger render={triggerContent} />
-        <PopoverContent className="w-auto max-w-[calc(100vw-16px)] overflow-x-auto p-0" align="end" sideOffset={8}>
+        <PopoverContent className="w-auto min-w-fit max-w-[calc(100vw-16px)] overflow-x-auto p-0" align="end" sideOffset={8}>
           <div className="flex flex-col">
             <Calendar
               initialFocus
@@ -83,7 +85,7 @@ export function DatePickerWithRange({
                 }
               }}
               numberOfMonths={isMobile ? 1 : 2}
-            
+              showOutsideDays={false}
               fromDate={minDate}
               toDate={new Date()}
               disabled={minDate ? { before: minDate } : undefined}

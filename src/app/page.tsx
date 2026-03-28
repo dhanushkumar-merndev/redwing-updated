@@ -168,7 +168,7 @@ export default function DashboardPage() {
           initial="hidden"
           animate="visible"
         >
-          <AnalyticsSection />
+          <AnalyticsSection applicants={applicants} />
         </motion.div>
 
         <div className="space-y-4 md:space-y-6">

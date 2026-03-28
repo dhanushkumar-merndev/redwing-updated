@@ -76,7 +76,10 @@ export default function DepartmentTabs({
       </div>
 
       {/* Status Chips (Image 5 Scrollable) */}
-      <div className="flex w-full items-center gap-2 overflow-x-auto pl-1 pb-2 no-scrollbar scroll-smooth">
+      <div 
+        className="flex w-full items-center gap-2 overflow-x-auto pl-1 pb-2 no-scrollbar scroll-smooth flex-nowrap touch-pan-x pointer-events-auto"
+        data-lenis-prevent
+      >
         <div className="flex items-center gap-2 pr-4">
           {STATUS_TABS.map((tab) => {
             const isActive = activeStatus === tab.value;

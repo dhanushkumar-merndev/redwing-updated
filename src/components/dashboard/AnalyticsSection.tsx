@@ -12,6 +12,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
@@ -32,6 +40,7 @@ import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from "date-f
 import type { DateRange } from "react-day-picker";
 import type { Role } from "@/lib/roles";
 import type { AnalyticsEntry } from "@/app/api/analytics/route";
+import type { Applicant } from "@/types";
 
 const chartConfig = {
   pending:    { label: "Pending",    color: "var(--chart-1)" },
@@ -112,13 +121,19 @@ const analyticsVariants: Variants = {
   },
 };
 
-export default function AnalyticsSection() {
+interface AnalyticsSectionProps {
+  applicants: Applicant[];
+}
+
+export default function AnalyticsSection({ applicants }: AnalyticsSectionProps) {
   const [entries, setEntries]               = useState<AnalyticsEntry[]>([]);
   const [earliestDate, setEarliestDate]     = useState<Date | undefined>(undefined);
   const [chartType, setChartType]           = useState<"area" | "bar">("area");
   const [statusFilter, setStatusFilter]     = useState<string>("all");
   const [trendDateRange, setTrendDateRange] = useState<DateRange | undefined>(undefined);
   const [roleDateRange, setRoleDateRange]   = useState<DateRange | undefined>(undefined);
+  const [isCSVModalOpen, setIsCSVModalOpen] = useState(false);
+  const [csvDateRange, setCSVDateRange]     = useState<DateRange | undefined>(undefined);
   const mounted = useMounted();
   const [, startTransition] = useTransition();
 
@@ -212,19 +227,67 @@ export default function AnalyticsSection() {
     }));
   }, [entries, roleDateRange]);
 
-  const downloadCSV = () => {
-    const headers = ["Date", "Pending", "Interested", "In Process", "Rejected"];
-    const rows    = filteredAnalytics.map((d) =>
-      [d.date, d.pending, d.interested, d.inprocess, d.rejected].join(",")
-    );
+  const handleCSVExport = () => {
+    if (!csvDateRange?.from) {
+      console.warn("CSV Export: No start date selected.");
+      return;
+    }
+    const from = startOfDay(csvDateRange.from);
+    const to   = endOfDay(csvDateRange.to || csvDateRange.from);
+
+    console.log(`CSV Export: Start=${from}, End=${to}, TotalApplicants=${applicants.length}`);
+
+    const filtered = applicants.filter((a) => {
+      // Try parsing as ISO, fallback to direct native parser
+      let d = parseISO(a.created_time);
+      if (isNaN(d.getTime())) {
+        d = new Date(a.created_time);
+      }
+      
+      if (isNaN(d.getTime())) {
+        console.error(`CSV Export: Invalid date for applicant ${a.full_name}: ${a.created_time}`);
+        return false;
+      }
+      
+      return isWithinInterval(d, { start: from, end: to });
+    });
+
+    console.log(`CSV Export: Found ${filtered.length} matching records.`);
+
+    if (filtered.length === 0) {
+      alert("No applicant records found for the selected date range.");
+      return;
+    }
+
+    const headers = ["Created Time", "Name", "Position", "Email", "Phone", "Status", "Feedback"];
+    const rows    = filtered.map((a) => {
+      let d = parseISO(a.created_time);
+      if (isNaN(d.getTime())) {
+        d = new Date(a.created_time);
+      }
+      
+      const dateStr = isNaN(d.getTime()) ? a.created_time : format(d, "yyyy-MM-dd HH:mm:ss");
+
+      return [
+        dateStr,
+        `"${a.full_name.replace(/"/g, '""')}"`,
+        `"${a.position}"`,
+        a.email,
+        a.phone,
+        a.status,
+        `"${a.feedback.replace(/"/g, '""')}"`,
+      ].join(",");
+    });
+
     const csv  = [headers.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
     const url  = URL.createObjectURL(blob);
-    const a    = document.createElement("a");
-    a.href     = url;
-    a.download = `trends_${new Date().toISOString().split("T")[0]}.csv`;
-    a.click();
+    const link = document.createElement("a");
+    link.href     = url;
+    link.download = `applicants_${format(from, "yyyyMMdd")}_${format(to, "yyyyMMdd")}.csv`;
+    link.click();
     URL.revokeObjectURL(url);
+    setIsCSVModalOpen(false);
   };
 
   const activeKeys =
@@ -269,14 +332,53 @@ export default function AnalyticsSection() {
               </Button>
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-8 text-[10px] px-3 font-bold text-zinc-600 bg-white"
-              onClick={downloadCSV}
-            >
-              CSV
-            </Button>
+            <Dialog open={isCSVModalOpen} onOpenChange={setIsCSVModalOpen}>
+              <DialogTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-[10px] px-3 font-bold text-zinc-600 bg-white"
+                  >
+                    CSV
+                  </Button>
+                }
+              />
+              <DialogContent className="sm:max-w-[425px] rounded-3xl">
+                <DialogHeader>
+                  <DialogTitle className="text-xl font-bold text-zinc-900">Export Applicants CSV</DialogTitle>
+                </DialogHeader>
+                <div className="py-6 space-y-4">
+                  <p className="text-sm text-zinc-500">
+                    Select a date range to export all applicant records within that period.
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider">Date Range</label>
+                    <DatePickerWithRange 
+                      date={csvDateRange} 
+                      setDate={setCSVDateRange} 
+                      minDate={earliestDate}
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => setIsCSVModalOpen(false)}
+                    className="rounded-xl font-bold text-xs"
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleCSVExport}
+                    disabled={!csvDateRange?.from}
+                    className="bg-primary text-white hover:bg-primary/80 cursor-pointer rounded-xl font-bold text-xs px-6"
+                  >
+                    Download CSV
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             <div className="h-4 w-px bg-zinc-200 mx-1" />
 
