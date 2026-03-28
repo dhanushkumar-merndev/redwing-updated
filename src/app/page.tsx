@@ -8,15 +8,15 @@ import AnalyticsSection from "@/components/dashboard/AnalyticsSection";
 import DepartmentTabs from "@/components/dashboard/DepartmentTabs";
 import FilterBar from "@/components/dashboard/FilterBar";
 import ApplicantCard from "@/components/dashboard/ApplicantCard";
-import MobileFilters from "@/components/dashboard/MobileFilters";
 import { useApplicants } from "@/hooks/useApplicants";
 import { useMounted } from "@/hooks/useMounted";
+import UserRegistrationDialog from "@/components/dashboard/UserRegistrationDialog";
 
 import { getDepartment } from "@/lib/roles";
 import type { Department, ApplicantStatus, SortField, SortOrder, Role, Applicant } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { resizeLenis } from "@/lib/lenis";
+import { resizeLenis, scrollToPosition } from "@/lib/lenis";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 const ITEMS_PER_PAGE = 12;
@@ -42,7 +42,6 @@ export default function DashboardPage() {
   const [sortField, setSortField] = useState<SortField>("created_time");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [displayLimit, setDisplayLimit] = useState(ITEMS_PER_PAGE);
-  const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const [activeMobileView, setActiveMobileView] = useState<"dashboard" | "applicants">("dashboard");
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
@@ -150,7 +149,11 @@ export default function DashboardPage() {
       <AnalyticsSection applicants={applicants} />
       {mounted && !isDesktop && (
         <Button
-          onClick={() => setActiveMobileView("applicants")}
+          onClick={() => {
+            setActiveMobileView("applicants");
+            setTimeout(() => resizeLenis(), 50);
+            setTimeout(() => scrollToPosition(0), 100);
+          }}
           className="w-full h-14 bg-primary text-white rounded-2xl font-bold shadow-xl active:scale-95 transition-all text-sm flex items-center justify-center gap-2 group mb-6"
         >
           View Applicant Database
@@ -182,52 +185,32 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {mounted && isDesktop ? (
-        <motion.div key="desktop-filters" className="flex flex-row items-end justify-between gap-3" variants={fadeUp(0.3)} initial="hidden" animate="visible">
-          <DepartmentTabs {...departmentTabsProps} />
-          <FilterBar
-            department={activeDepartment}
-            searchQuery={searchQuery}
-            onSearchChange={(q) => handleFilterChange(() => setSearchQuery(q))}
-            selectedRole={selectedRole}
-            onRoleChange={(r) => handleFilterChange(() => setSelectedRole(r))}
-            sortField={sortField}
-            onSortFieldChange={(f) => handleFilterChange(() => setSortField(f))}
-            sortOrder={sortOrder}
-            onSortOrderChange={(o) => handleFilterChange(() => setSortOrder(o))}
-          />
-        </motion.div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          <div className="flex items-center gap-2">
-            <div className="relative flex-1">
-              <svg className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search leads..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-11 w-full pl-10 pr-10 text-sm font-medium rounded-xl border-none bg-white shadow-sm ring-1 ring-zinc-200 focus:ring-2 focus:ring-primary/20 transition-all"
-              />
-              {searchQuery && (
-                <button type="button" onClick={() => setSearchQuery("")} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400">
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                </button>
-              )}
-            </div>
-            <Button variant="outline" size="icon" onClick={() => setIsFiltersOpen(true)} className="h-11 w-11 rounded-xl border-zinc-200 bg-white shadow-sm">
-              <svg className="h-4.5 w-4.5 text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-              </svg>
-            </Button>
-          </div>
+      <motion.div 
+        key="filters" 
+        className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 md:gap-3" 
+        variants={fadeUp(0.3)} 
+        initial="hidden" 
+        animate="visible"
+      >
+        <div className="w-full sm:w-auto min-w-0">
           <DepartmentTabs {...departmentTabsProps} />
         </div>
-      )}
+        <div className="w-full sm:w-auto">
+          <FilterBar
+          department={activeDepartment}
+          searchQuery={searchQuery}
+          onSearchChange={(q) => handleFilterChange(() => setSearchQuery(q))}
+          selectedRole={selectedRole}
+          onRoleChange={(r) => handleFilterChange(() => setSelectedRole(r))}
+          sortField={sortField}
+          onSortFieldChange={(f) => handleFilterChange(() => setSortField(f))}
+          sortOrder={sortOrder}
+          onSortOrderChange={(o) => handleFilterChange(() => setSortOrder(o))}
+          activeStatus={activeStatus}
+          onStatusChange={(s) => handleFilterChange(() => setActiveStatus(s))}
+        />
+      </div>
+      </motion.div>
 
       <div className="min-h-[600px] relative">
         <AnimatePresence mode="wait">
@@ -297,6 +280,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-50 pb-20">
+      <UserRegistrationDialog />
       <Header 
         onRefresh={() => fetchApplicants(() => setLastUpdated(new Date()))} 
         isPending={isPending} 
@@ -315,36 +299,30 @@ export default function DashboardPage() {
           <AnimatePresence mode="wait">
             <motion.div
               key={activeMobileView}
-              initial={{ opacity: 0, x: activeMobileView === "dashboard" ? -10 : 10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: activeMobileView === "dashboard" ? 10 : -10 }}
-              transition={{ duration: 0.3, ease: "easeInOut" }}
+              initial={{ 
+                opacity: 0, 
+                scale: 0.99
+              }}
+              animate={{ 
+                opacity: 1, 
+                scale: 1
+              }}
+              exit={{ 
+                opacity: 0, 
+                scale: 0.99
+              }}
+              transition={{ 
+                type: "spring",
+                damping: 30, // Slightly tighter damping for faster fade
+                stiffness: 250,
+                mass: 0.5
+              }}
             >
               {activeMobileView === "dashboard" ? DashboardContent : ApplicantsListContent}
             </motion.div>
           </AnimatePresence>
         )}
       </main>
-
-      <MobileFilters
-        isOpen={isFiltersOpen}
-        onClose={() => setIsFiltersOpen(false)}
-        activeDepartment={activeDepartment}
-        departmentCounts={departmentCounts}
-        statusCounts={statusCountsForActiveDept}
-        onDepartmentChange={(d: Department) => handleFilterChange(() => {
-          setActiveDepartment(d);
-          setSelectedRole("all");
-        })}
-        activeStatus={activeStatus}
-        onStatusChange={(s: ApplicantStatus | "all") => handleFilterChange(() => setActiveStatus(s))}
-        selectedRole={selectedRole}
-        onRoleChange={(r: Role | "all") => handleFilterChange(() => setSelectedRole(r))}
-        sortField={sortField}
-        onSortFieldChange={(f: SortField) => handleFilterChange(() => setSortField(f))}
-        sortOrder={sortOrder}
-        onSortOrderChange={(o: SortOrder) => handleFilterChange(() => setSortOrder(o))}
-      />
     </div>
   );
 }

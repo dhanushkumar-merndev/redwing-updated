@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition, useState, type FormEvent } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -12,29 +12,35 @@ export default function LoginPage() {
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
     startTransition(async () => {
-      const res = await fetch("/api/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-      });
+      try {
+        const res = await fetch("/api/auth", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password }),
+        });
 
-      if (res.ok) {
-        router.push("/");
-        router.refresh();
-      } else {
-        setError("Invalid password. Please try again.");
+        if (res.ok) {
+          const { hash } = await res.json();
+          document.cookie = `dashboard_auth=${hash}; path=/; max-age=86400; SameSite=Lax`;
+          router.push("/");
+          router.refresh();
+        } else {
+          setError("Invalid password");
+        }
+      } catch {
+        setError("Something went wrong. Try again.");
       }
     });
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 px-4 ">
-      <Card className="w-full max-w-md shadow-xl pt-12 pb-6">
+    <div className="flex min-h-screen items-center justify-center bg-secondary px-4 ">
+      <Card className="w-full max-w-md shadow-xl pt-12 pb-6 md:px-5 md:pb-12">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex items-center gap-3 flex-col">
             <img

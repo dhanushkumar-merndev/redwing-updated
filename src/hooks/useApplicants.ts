@@ -2,6 +2,8 @@
 
 import { useTransition, useState, useCallback } from "react";
 import type { Applicant } from "@/types";
+import { getFromDB } from "@/lib/db";
+import { decryptName } from "@/lib/crypto";
 
 export const useApplicants = () => {
   const [applicants, setApplicants] = useState<Applicant[]>([]);
@@ -26,10 +28,14 @@ export const useApplicants = () => {
     (id: string, data: Partial<Applicant>, onComplete?: () => void) => {
       startTransition(async () => {
         try {
+          // Get identity
+          const encrypted = await getFromDB();
+          const user = encrypted ? await decryptName(encrypted) : "Unknown";
+
           const putRes = await fetch(`/api/applicants/${id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data),
+            body: JSON.stringify({ ...data, user }),
           });
           if (!putRes.ok) {
             const err = await putRes.json().catch(() => ({}));
@@ -54,10 +60,14 @@ export const useApplicants = () => {
     (data: Omit<Applicant, "id" | "created_time" | "updated">, onComplete?: () => void) => {
       startTransition(async () => {
         try {
+          // Get identity
+          const encrypted = await getFromDB();
+          const user = encrypted ? await decryptName(encrypted) : "Unknown";
+
           await fetch("/api/applicants", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data),
+            body: JSON.stringify({ ...data, user }),
           });
           const res = await fetch("/api/applicants");
           if (res.ok) {

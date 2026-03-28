@@ -38,9 +38,9 @@ export default function DepartmentTabs({
   const mounted = useMounted();
 
   return (
-    <div className="flex flex-col gap-4">
-      {/* Department Selector (Image 5 style) */}
-      <div className="flex ml-1 h-11 w-fit items-center gap-1 rounded-2xl bg-zinc-100 p-1 shadow-inner ring-1 ring-zinc-200/50">
+    <div className="flex flex-col gap-4 w-full min-w-0 overflow-hidden">
+      {/* Department Selector (Full width on mobile) */}
+      <div className="flex w-full sm:w-fit h-11 items-center gap-1 rounded-2xl bg-zinc-100 p-1 shadow-inner ring-1 ring-zinc-200/50">
         {DEPARTMENTS.map((dept) => {
           const isActive = activeDepartment === dept.value;
           return (
@@ -48,7 +48,7 @@ export default function DepartmentTabs({
               key={dept.value}
               onClick={() => onDepartmentChange(dept.value)}
               className={cn(
-                "relative flex h-full items-center gap-2 rounded-xl px-4 transition-all duration-300",
+                "relative flex h-full flex-1 sm:flex-initial items-center justify-center gap-2 rounded-xl px-4 transition-all duration-300",
                 isActive ? "text-primary z-10" : "text-zinc-500 hover:text-zinc-800"
               )}
             >
@@ -77,10 +77,10 @@ export default function DepartmentTabs({
 
       {/* Status Chips (Image 5 Scrollable) */}
       <div 
-        className="flex w-full items-center gap-2 overflow-x-auto pl-1 pb-2 no-scrollbar scroll-smooth flex-nowrap touch-pan-x pointer-events-auto"
+        className="flex w-full min-w-0 items-center gap-2 overflow-x-auto pl-1 pb-1 no-scrollbar scroll-smooth flex-nowrap touch-pan-x pointer-events-auto"
         data-lenis-prevent
       >
-        <div className="flex items-center gap-2 pr-4">
+        <div className="flex flex-nowrap items-center gap-2 pr-4 min-w-0">
           {STATUS_TABS.map((tab) => {
             const isActive = activeStatus === tab.value;
             return (

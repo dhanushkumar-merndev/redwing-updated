@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import type { Department, Role, SortField, SortOrder } from "@/types";
+import type { Department, Role, SortField, SortOrder, ApplicantStatus } from "@/types";
 import { ROLES_BY_DEPARTMENT } from "@/lib/roles";
 
 interface FilterBarProps {
@@ -30,14 +30,23 @@ interface FilterBarProps {
   onSortFieldChange: (field: SortField) => void;
   sortOrder: SortOrder;
   onSortOrderChange: (order: SortOrder) => void;
+  activeStatus: ApplicantStatus | "all";
+  onStatusChange: (status: ApplicantStatus | "all") => void;
 }
 
 const SORT_FIELDS: { value: SortField; label: string }[] = [
-  { value: "created_time", label: "Date Created" },
+  { value: "created_time", label: "Creation Date" },
   { value: "updated", label: "Last Updated" },
-  { value: "full_name", label: "Name" },
-  { value: "position", label: "Role" },
-  { value: "status", label: "Status" },
+  { value: "full_name", label: "Applicant Name" },
+  { value: "position", label: "Role Title" },
+];
+
+const STATUS_FILTERS: { value: ApplicantStatus | "all"; label: string }[] = [
+  { value: "all", label: "All Statuses" },
+  { value: "pending", label: "Pending" },
+  { value: "interested", label: "Interested" },
+  { value: "inprocess", label: "In Process" },
+  { value: "rejected", label: "Rejected" },
 ];
 
 export default function FilterBar({
@@ -50,11 +59,16 @@ export default function FilterBar({
   onSortFieldChange,
   sortOrder,
   onSortOrderChange,
+  activeStatus,
+  onStatusChange,
 }: FilterBarProps) {
   const mounted = useMounted();
 
   const departmentRoles = ROLES_BY_DEPARTMENT[department];
-  const activeFiltersCount = (selectedRole !== "all" ? 1 : 0) + (sortField !== "created_time" || sortOrder !== "desc" ? 1 : 0);
+  const activeFiltersCount = 
+    (selectedRole !== "all" ? 1 : 0) + 
+    (activeStatus !== "all" ? 1 : 0) + 
+    (sortField !== "created_time" || sortOrder !== "desc" ? 1 : 0);
 
   return (
     <div className="flex flex-col gap-3 mb-2 sm:flex-row sm:items-center">
@@ -145,12 +159,12 @@ export default function FilterBar({
             </svg>
             Filters
             {activeFiltersCount > 0 && (
-              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-white">
+              <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary text-[10px] text-white animate-in zoom-in-50">
                 {activeFiltersCount}
               </span>
             )}
           </PopoverTrigger>
-          <PopoverContent className="w-64 p-4 rounded-2xl shadow-xl border-zinc-100" align="end">
+          <PopoverContent className="w-72 p-4 rounded-2xl shadow-xl border-zinc-100" align="end" sideOffset={8}>
             <div className="space-y-4">
               <div className="space-y-2">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Sort Mechanism</p>
@@ -189,6 +203,24 @@ export default function FilterBar({
               <Separator className="bg-zinc-100" />
 
               <div className="space-y-2">
+                <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Filter By Status</p>
+                <Select value={activeStatus} onValueChange={(v) => v && onStatusChange(v as ApplicantStatus | "all")}>
+                  <SelectTrigger className="h-9 w-full text-xs rounded-lg border-zinc-200">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_FILTERS.map((s) => (
+                      <SelectItem key={s.value} value={s.value} className="text-xs">
+                        {s.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Separator className="bg-zinc-100" />
+
+              <div className="space-y-2">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-zinc-400">Filter by Role</p>
                 <Select value={selectedRole} onValueChange={(v) => v && onRoleChange(v as Role | "all")}>
                   <SelectTrigger className="h-9 w-full text-xs rounded-lg border-zinc-200">
@@ -209,6 +241,7 @@ export default function FilterBar({
                 <button 
                   onClick={() => {
                     onRoleChange("all");
+                    onStatusChange("all");
                     onSortFieldChange("created_time");
                     onSortOrderChange("desc");
                   }}

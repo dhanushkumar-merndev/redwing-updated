@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
+import { hashPassword } from "@/lib/auth";
 
-export function proxy(req: NextRequest) {
-  const auth = req.cookies.get("dashboard_auth")?.value;
+export async function proxy(req: NextRequest) {
+  const authCookie = req.cookies.get("dashboard_auth")?.value;
+  const dashboardPassword = process.env.DASHBOARD_PASSWORD;
+  const authSalt = process.env.AUTH_SALT || "";
 
-  if (auth !== process.env.DASHBOARD_PASSWORD) {
+  if (!dashboardPassword) {
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  const expectedHash = await hashPassword(dashboardPassword, authSalt);
+
+  if (authCookie !== expectedHash) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 

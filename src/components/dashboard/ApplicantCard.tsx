@@ -256,7 +256,7 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
                     variant="outline"
                     size="sm" 
                     className={cn(
-                      "h-10 cursor-pointer px-2 text-[10px] font-black rounded-full transition-all border border-transparent shadow-sm",
+                      "h-8 md:h-10 cursor-pointer px-2 text-[10px] font-black rounded-full transition-all border border-transparent shadow-sm",
                       isSelected
                         ? `${config.activeBg} ${config.color} ${config.activeBorder} shadow-inner`
                         : "bg-zinc-100/50 text-zinc-600 hover:bg-white hover:border-zinc-200"
@@ -304,9 +304,15 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
               <div className="flex items-center gap-1 text-[11px] text-zinc-400 font-black">
                 <Clock className="w-3 h-3" />
                 {applicant.updated.length > 0
-                  ? format(new Date(applicant.updated[applicant.updated.length - 1]), "dd MMM")
+                  ? format(new Date(applicant.updated[applicant.updated.length - 1].split("|")[0]), "dd MMM")
                   : "New Lead"}
               </div>
+              {applicant.updated.length > 0 && applicant.updated[applicant.updated.length - 1].includes("|") && (
+                <span className="text-[9px] font-black text-primary/70 uppercase">
+                  By {applicant.updated[applicant.updated.length - 1].split("|")[1]}
+                </span>
+              )}
+            </div>
               
               <Dialog>
                 <DialogTrigger className="text-[10px] text-primary font-black text-left outline-none hover:underline flex items-center gap-1 transition-all cursor-pointer">
@@ -328,11 +334,18 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
                             <div className="w-1.5 h-1.5 rounded-full bg-white" />
                           </div>
                           <div className="flex flex-col gap-0.5">
-                            <span className="text-xs font-black text-zinc-900">
-                              {format(new Date(dateString), "dd MMMM yyyy")}
-                            </span>
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-black text-zinc-900">
+                                {format(new Date(dateString.split("|")[0]), "dd MMMM yyyy")}
+                              </span>
+                              {dateString.includes("|") && (
+                                <Badge variant="secondary" className="h-4 text-[8px] px-1.5 font-black bg-zinc-100/80 text-primary border-none">
+                                  {dateString.split("|")[1]}
+                                </Badge>
+                              )}
+                            </div>
                             <span className="text-[10px] font-bold text-zinc-400">
-                              {format(new Date(dateString), "hh:mm a")}
+                              {format(new Date(dateString.split("|")[0]), "hh:mm a")}
                             </span>
                           </div>
                         </div>
@@ -343,7 +356,6 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
                   </div>
                 </DialogContent>
               </Dialog>
-            </div>
             
             <Button
               onClick={handleSave}

@@ -58,7 +58,7 @@ export async function PUT(
       return NextResponse.json({ errors }, { status: 400 });
     }
 
-    // Parse updated array, append new date
+    // Parse updated array, append new date|user
     let updatedArr: string[] = [];
     try {
       const parsed: unknown = JSON.parse(String(row[7] ?? "[]"));
@@ -68,7 +68,9 @@ export async function PUT(
     } catch {
       updatedArr = [];
     }
-    updatedArr.push(new Date().toISOString());
+    
+    const user = body.user ? String(body.user) : "Unknown";
+    updatedArr.push(`${new Date().toISOString()}|${user}`);
     const updatedStr = JSON.stringify(updatedArr);
 
     // Only update columns F-H (status, feedback, updated)

@@ -73,7 +73,8 @@ export async function POST(req: NextRequest) {
     }
 
     const createdTime = new Date().toISOString();
-    const updatedArr = JSON.stringify([createdTime]);
+    const user = body.user ? String(body.user) : "System";
+    const updatedArr = JSON.stringify([`${createdTime}|${user}`]);
 
     const newRow = [createdTime, position, fullName, phone, email, status, feedback, updatedArr];
 
