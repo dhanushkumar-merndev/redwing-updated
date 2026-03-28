@@ -3,7 +3,7 @@ import { sheets, SHEET_ID, TAB_RANGE } from "@/lib/sheets";
 import { mapRow } from "@/lib/mapRow";
 import { getCache, setCache } from "@/lib/cache";
 import { rateLimit } from "@/lib/rateLimit";
-import type { AnalyticsDataPoint, RoleBarData, ApplicantStatus } from "@/types";
+import type { ApplicantStatus } from "@/types";
 
 export interface AnalyticsEntry {
   date: string; // ISO date
@@ -50,15 +50,21 @@ export async function GET(req: NextRequest) {
       const date = new Date(timestamp);
       if (isNaN(date.getTime())) continue;
 
+      // Extract local YYYY-MM-DD to avoid UTC day-shift bugs
+      const yStr = String(date.getFullYear());
+      const mStr = String(date.getMonth() + 1).padStart(2, "0");
+      const dStr = String(date.getDate()).padStart(2, "0");
+      const dateStr = `${yStr}-${mStr}-${dStr}`;
+
       entries.push({
-        date: date.toISOString().split("T")[0],
+        date: dateStr,
         role: app.position,
         status: s,
       });
     }
 
     const result: AnalyticsResult = { entries, stats };
-    setCache("analytics-v2", result);
+    setCache("analytics-v3", result);
 
     return NextResponse.json(result);
   } catch (error) {

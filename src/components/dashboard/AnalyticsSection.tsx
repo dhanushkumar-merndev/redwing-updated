@@ -15,7 +15,6 @@ import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-
 } from "@/components/ui/chart";
 import {
   Area,
@@ -29,21 +28,21 @@ import {
 import { motion, type Variants } from "framer-motion";
 import { ROLE_SHORT_NAMES } from "@/lib/roles";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
-import {  format, isWithinInterval, startOfDay, endOfDay, parseISO } from "date-fns";
+import { format, isWithinInterval, startOfDay, endOfDay, parseISO } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import type { Role } from "@/lib/roles";
 import type { AnalyticsEntry } from "@/app/api/analytics/route";
 
 const chartConfig = {
-  pending: { label: "Pending", color: "#f59e0b" },
-  interested: { label: "Interested", color: "#10b981" },
-  inprocess: { label: "In Process", color: "#3b82f6" },
-  rejected: { label: "Rejected", color: "#ef4444" },
+  pending:    { label: "Pending",    color: "var(--chart-1)" },
+  interested: { label: "Interested", color: "var(--chart-3)" },
+  inprocess:  { label: "In Process", color: "var(--chart-4)" },
+  rejected:   { label: "Rejected",   color: "var(--chart-2)" },
 } as const;
 
 const STATUS_KEYS = ["pending", "interested", "inprocess", "rejected"] as const;
 
-const START_DATE = new Date("2026-02-22");
+
 
 
 interface AggregatedPoint {
@@ -54,108 +53,154 @@ interface AggregatedPoint {
   rejected: number;
 }
 
+// ─── Pill shape: upright bars (Trends bar chart) ────────────────────────────
+// Rounds only the top two corners so bars sit flush on the axis baseline.
+const PillBarUpright = (props: { x: number; y: number; width: number; height: number; fill?: string; }) => {
+  const { x, y, width, height, fill = "" } = props;
+  if (!width || !height || height <= 0 || width <= 0) return null;
+  const r = Math.min(width / 2, 6);
+  return (
+    <path
+      d={`
+        M ${x + r},${y}
+        H ${x + width - r}
+        Q ${x + width},${y} ${x + width},${y + r}
+        V ${y + height}
+        H ${x}
+        V ${y + r}
+        Q ${x},${y} ${x + r},${y}
+        Z
+      `}
+      fill={fill}
+    />
+  );
+};
+
+// ─── Pill shape: horizontal stacked bars (Role Breakdown) ───────────────────
+// Rounds only the outermost ends of the full stack so each row reads as one pill.
+const PillBarHorizontal = (props: { x: number; y: number; width: number; height: number; fill?: string; isFirst: boolean; isLast: boolean; }) => {
+  const { x, y, width, height, fill = "", isFirst, isLast } = props;
+  if (!width || !height || height <= 0 || width <= 0) return null;
+  const r  = Math.min(height / 2, 7);
+  const lR = isFirst ? r : 0;
+  const rR = isLast  ? r : 0;
+  return (
+    <path
+      d={`
+        M ${x + lR},${y}
+        H ${x + width - rR}
+        Q ${x + width},${y} ${x + width},${y + r}
+        V ${y + height - r}
+        Q ${x + width},${y + height} ${x + width - rR},${y + height}
+        H ${x + lR}
+        Q ${x},${y + height} ${x},${y + height - r}
+        V ${y + r}
+        Q ${x},${y} ${x + lR},${y}
+        Z
+      `}
+      fill={fill}
+    />
+  );
+};
+
 const analyticsVariants: Variants = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { 
-    opacity: 1, 
-    y: 0, 
-    transition: { 
-      duration: 0.6, 
-      ease: [0.22, 1, 0.36, 1], // Quintic out
-      delay: 0.15
-    } 
+  hidden:  { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const, delay: 0.15 },
   },
 };
 
 export default function AnalyticsSection() {
-  const [entries, setEntries] = useState<AnalyticsEntry[]>([]);
-  const [chartType, setChartType] = useState<"area" | "bar">("area");
-  const [statusFilter, setStatusFilter] = useState<string>("pending");
-  const [trendDateRange, setTrendDateRange] = useState<DateRange | undefined>({
-    from: START_DATE,
-    to: new Date(),
-  });
-  const [roleDateRange, setRoleDateRange] = useState<DateRange | undefined>({
-    from: START_DATE,
-    to: new Date(),
-  });
+  const [entries, setEntries]               = useState<AnalyticsEntry[]>([]);
+  const [earliestDate, setEarliestDate]     = useState<Date | undefined>(undefined);
+  const [chartType, setChartType]           = useState<"area" | "bar">("area");
+  const [statusFilter, setStatusFilter]     = useState<string>("all");
+  const [trendDateRange, setTrendDateRange] = useState<DateRange | undefined>(undefined);
+  const [roleDateRange, setRoleDateRange]   = useState<DateRange | undefined>(undefined);
   const mounted = useMounted();
   const [, startTransition] = useTransition();
 
   const fetchAnalytics = useCallback(() => {
     startTransition(async () => {
       try {
-        const res = await fetch("/api/analytics");
+        const res  = await fetch("/api/analytics");
         if (!res.ok) return;
-        const data = await res.json() as { entries: AnalyticsEntry[] };
-        setEntries(data.entries ?? []);
-      } catch {
-        // Handle error
-      }
+        const data = (await res.json()) as { entries: AnalyticsEntry[] };
+        const fetched = data.entries ?? [];
+        setEntries(fetched);
+
+        // Parse "YYYY-MM-DD" as LOCAL date (not UTC) to avoid timezone shifting
+        const toLocalDate = (dateStr: string): Date => {
+          const [y, m, d] = dateStr.split("-").map(Number);
+          return new Date(y, m - 1, d); // local midnight — no UTC offset issue
+        };
+
+        // Derive the earliest date dynamically from real data
+        if (fetched.length > 0) {
+          const earliest = fetched.reduce<Date>((min, e) => {
+            const d = toLocalDate(e.date);
+            return d < min ? d : min;
+          }, toLocalDate(fetched[0].date));
+          const today = new Date();
+          setEarliestDate(earliest);
+          setTrendDateRange((prev) => prev ?? { from: earliest, to: today });
+          setRoleDateRange((prev)  => prev ?? { from: earliest, to: today });
+        }
+      } catch { /* handle error */ }
     });
   }, []);
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, [fetchAnalytics]);
+  useEffect(() => { fetchAnalytics(); }, [fetchAnalytics]);
 
-
-  // Aggregate Trends on client
+  // ── Aggregate: Trends ──────────────────────────────────────────────────────
   const filteredAnalytics = useMemo(() => {
     if (!entries.length || !trendDateRange?.from) return [];
-    
-    const from = startOfDay(trendDateRange.from);
-    const to = endOfDay(trendDateRange.to || trendDateRange.from);
+    const from    = startOfDay(trendDateRange.from);
+    const to      = endOfDay(trendDateRange.to || trendDateRange.from);
+    const dateMap = new Map<string, Omit<AggregatedPoint, "date">>();
 
-    const dateMap = new Map<string, Omit<AggregatedPoint, 'date'>>();
-
-    entries.forEach(entry => {
+    entries.forEach((entry) => {
       const entryDate = parseISO(entry.date);
       if (isWithinInterval(entryDate, { start: from, end: to })) {
         const key = format(entryDate, "dd MMM");
-        if (!dateMap.has(key)) {
+        if (!dateMap.has(key))
           dateMap.set(key, { pending: 0, interested: 0, inprocess: 0, rejected: 0 });
-        }
         const counts = dateMap.get(key)!;
-        if (entry.status in counts) {
+        if (entry.status in counts)
           counts[entry.status as keyof typeof counts]++;
-        }
       }
     });
 
-    const result: AggregatedPoint[] = Array.from(dateMap.entries())
-      .map(([date, counts]) => ({ date, ...counts }));
-
+    const result: AggregatedPoint[] = Array.from(dateMap.entries()).map(
+      ([date, counts]) => ({ date, ...counts })
+    );
     if (statusFilter === "all") return result;
-    
-    return result.map(point => ({
-      date: point.date,
-      pending: statusFilter === "pending" ? point.pending : 0,
-      interested: statusFilter === "interested" ? point.interested : 0,
-      inprocess: statusFilter === "inprocess" ? point.inprocess : 0,
-      rejected: statusFilter === "rejected" ? point.rejected : 0,
+    return result.map((p) => ({
+      date:       p.date,
+      pending:    statusFilter === "pending"    ? p.pending    : 0,
+      interested: statusFilter === "interested" ? p.interested : 0,
+      inprocess:  statusFilter === "inprocess"  ? p.inprocess  : 0,
+      rejected:   statusFilter === "rejected"   ? p.rejected   : 0,
     } as AggregatedPoint));
   }, [entries, statusFilter, trendDateRange]);
 
-  // Aggregate Role Breakdown on client
+  // ── Aggregate: Role Breakdown ──────────────────────────────────────────────
   const formattedRoleData = useMemo(() => {
     if (!entries.length || !roleDateRange?.from) return [];
+    const from    = startOfDay(roleDateRange.from);
+    const to      = endOfDay(roleDateRange.to || roleDateRange.from);
+    const roleMap = new Map<string, Omit<AggregatedPoint, "date">>();
 
-    const from = startOfDay(roleDateRange.from);
-    const to = endOfDay(roleDateRange.to || roleDateRange.from);
-    
-    const roleMap = new Map<string, Omit<AggregatedPoint, 'date'>>();
-
-    entries.forEach(entry => {
+    entries.forEach((entry) => {
       const entryDate = parseISO(entry.date);
       if (isWithinInterval(entryDate, { start: from, end: to })) {
-        if (!roleMap.has(entry.role)) {
+        if (!roleMap.has(entry.role))
           roleMap.set(entry.role, { pending: 0, interested: 0, inprocess: 0, rejected: 0 });
-        }
         const counts = roleMap.get(entry.role)!;
-        if (entry.status in counts) {
+        if (entry.status in counts)
           counts[entry.status as keyof typeof counts]++;
-        }
       }
     });
 
@@ -163,30 +208,29 @@ export default function AnalyticsSection() {
       role,
       ...counts,
       shortRole: ROLE_SHORT_NAMES[role as Role] || role,
-      fullName: role
+      fullName:  role,
     }));
   }, [entries, roleDateRange]);
 
   const downloadCSV = () => {
     const headers = ["Date", "Pending", "Interested", "In Process", "Rejected"];
-    const rows = filteredAnalytics.map((d: AggregatedPoint) =>
+    const rows    = filteredAnalytics.map((d) =>
       [d.date, d.pending, d.interested, d.inprocess, d.rejected].join(",")
     );
-    const csv = [headers.join(","), ...rows].join("\n");
+    const csv  = [headers.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement("a");
+    a.href     = url;
     a.download = `trends_${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
 
-  const activeKeys = statusFilter === "all"
-    ? STATUS_KEYS
-    : STATUS_KEYS.filter((k) => k === statusFilter);
-
-  if (!mounted) return <div className="grid gap-3 md:grid-cols-2 h-[400px] opacity-0" />;
+  const activeKeys =
+    statusFilter === "all"
+      ? STATUS_KEYS
+      : STATUS_KEYS.filter((k) => k === statusFilter);
 
   return (
     <motion.div
@@ -195,16 +239,16 @@ export default function AnalyticsSection() {
       initial="hidden"
       animate="visible"
     >
-      {/* Trend Chart */}
-      <Card className="shadow-sm overflow-hidden">
+      {/* ── Trend Chart ───────────────────────────────────────────────────── */}
+      <Card className="shadow-sm overflow-hidden outline-none ring-0 focus:ring-0 focus-within:ring-0">
         <CardHeader className="py-4 px-6 md:px-6 space-y-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xs font-bold text-muted-foreground md:text-sm">
               Application Trends
             </CardTitle>
-            <DatePickerWithRange date={trendDateRange} setDate={setTrendDateRange} />
+            <DatePickerWithRange date={trendDateRange} setDate={setTrendDateRange} minDate={earliestDate} />
           </div>
-          
+
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 p-0.5 bg-zinc-100 rounded-lg border border-zinc-200/50">
               <Button
@@ -225,10 +269,10 @@ export default function AnalyticsSection() {
               </Button>
             </div>
 
-            <Button 
-              variant="outline" 
-              size="sm" 
-              className="h-8 text-[10px] px-3 font-bold text-zinc-600 bg-white" 
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 text-[10px] px-3 font-bold text-zinc-600 bg-white"
               onClick={downloadCSV}
             >
               CSV
@@ -257,7 +301,7 @@ export default function AnalyticsSection() {
             <div className="flex h-full items-center justify-center text-sm text-zinc-400">
               No data in selected range
             </div>
-          ) : (
+          ) : mounted ? (
             <ChartContainer config={chartConfig} className="h-full w-full">
               {chartType === "area" ? (
                 <AreaChart data={filteredAnalytics}>
@@ -279,7 +323,7 @@ export default function AnalyticsSection() {
                   ))}
                 </AreaChart>
               ) : (
-                <BarChart data={filteredAnalytics} margin={{ left: 6, right: 6 }}>
+                <BarChart data={filteredAnalytics} margin={{ left: 6, right: 6 }} barSize={14}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
                   <XAxis dataKey="date" className="text-[10px] md:text-xs" />
                   <YAxis className="text-[10px] md:text-xs" width={30} />
@@ -289,73 +333,89 @@ export default function AnalyticsSection() {
                       key={key}
                       dataKey={key}
                       fill={chartConfig[key].color}
-                      radius={[4, 4, 0, 0]}
                       animationDuration={2000}
+                      shape={(p) => <PillBarUpright {...p} />}
                     />
                   ))}
                 </BarChart>
               )}
             </ChartContainer>
+          ) : (
+            <div className="h-full w-full bg-zinc-50/50 rounded-lg animate-pulse" />
           )}
         </CardContent>
       </Card>
 
-      {/* Role Breakdown */}
+      {/* ── Role Breakdown ────────────────────────────────────────────────── */}
       <Card className="shadow-sm">
-        <CardHeader className="py-4 px-6 md:px-6  pb-16 space-y-4">
+        <CardHeader className="py-4 px-6 md:px-6 pb-16 space-y-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xs font-bold text-muted-foreground md:text-sm">
               Role Breakdown
             </CardTitle>
-            <DatePickerWithRange date={roleDateRange} setDate={setRoleDateRange} />
+            <DatePickerWithRange date={roleDateRange} setDate={setRoleDateRange} minDate={earliestDate} />
           </div>
         </CardHeader>
+
         <CardContent className="h-56 p-3 pt-0 md:h-64 md:p-4 md:pt-0">
           {formattedRoleData.length === 0 ? (
             <div className="flex h-full items-center justify-center text-sm text-zinc-400">
               No data in range
             </div>
-          ) : (
+          ) : mounted ? (
             <ChartContainer config={chartConfig} className="h-full w-full">
-              <BarChart data={formattedRoleData} layout="vertical" margin={{ left: 10, right: 10 }}>
+              <BarChart
+                data={formattedRoleData}
+                layout="vertical"
+                margin={{ left: 0, right: 20 }}
+                barSize={14}
+              >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
                 <XAxis type="number" className="text-[10px] md:text-xs" />
-                <YAxis 
-                  dataKey="shortRole" 
-                  type="category" 
-                  className="text-[10px] font-bold text-muted-foreground" 
-                  width={40} 
+                <YAxis
+                  dataKey="shortRole"
+                  type="category"
+                  className="text-[10px] font-bold text-muted-foreground"
+                  width={40}
                   tickLine={false}
                   axisLine={false}
                 />
-                <ChartTooltip 
-                  cursor={{ fill: 'transparent' }}
+                <ChartTooltip
+                  cursor={{ fill: "transparent" }}
                   content={
-                    <ChartTooltipContent 
-                      labelFormatter={(value, payload) => {
-                        return payload?.[0]?.payload?.fullName || value;
-                      }}
+                    <ChartTooltipContent
+                      labelFormatter={(value, payload) =>
+                        payload?.[0]?.payload?.fullName || value
+                      }
                     />
-                  } 
+                  }
                 />
-                {STATUS_KEYS.map((key) => (
-                  <Bar 
-                    key={key} 
-                    dataKey={key} 
-                    fill={chartConfig[key].color} 
-                    stackId="a" 
-                    radius={0} 
+                {STATUS_KEYS.map((key, i) => (
+                  <Bar
+                    key={key}
+                    dataKey={key}
+                    fill={chartConfig[key].color}
+                    stackId="a"
                     animationDuration={2000}
+                    shape={(p) => (
+                      <PillBarHorizontal
+                        {...p}
+                        isFirst={i === 0}
+                        isLast={i === STATUS_KEYS.length - 1}
+                      />
+                    )}
                   />
                 ))}
               </BarChart>
             </ChartContainer>
-          )}
+          ) : (
+            <div className="h-full w-full bg-zinc-50/50 rounded-lg animate-pulse" />
+            )}
         </CardContent>
       </Card>
     </motion.div>
   );
 }
 
-// Subordinate components to avoid hydration text node collisions
+// Avoids hydration text-node collisions
 const SelectSeparator = () => <div className="h-px bg-zinc-100 my-1 mx-[-4px]" />;

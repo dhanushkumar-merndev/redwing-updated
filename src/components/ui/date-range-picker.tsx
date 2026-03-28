@@ -13,6 +13,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { useMediaQuery } from "@/hooks/useMediaQuery"
 
 interface DatePickerWithRangeProps {
   className?: string;
@@ -25,19 +26,11 @@ export function DatePickerWithRange({
   className,
   date,
   setDate,
-  minDate = new Date("2026-02-22"),
+  minDate,
 }: DatePickerWithRangeProps) {
   const [open, setOpen] = React.useState(false)
+  const isMobile = useMediaQuery("(max-width: 768px)");
   const [internalDate, setInternalDate] = React.useState<DateRange | undefined>(date)
-  const [isMobile, setIsMobile] = React.useState(false)
-
-  // Track window size for responsive months
-  React.useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768)
-    checkMobile()
-    window.addEventListener("resize", checkMobile)
-    return () => window.removeEventListener("resize", checkMobile)
-  }, [])
 
   // Sync internal state when popover opens
   React.useEffect(() => {
@@ -77,7 +70,7 @@ export function DatePickerWithRange({
     <div className={cn("grid gap-2", className)}>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger render={triggerContent} />
-        <PopoverContent className="w-[calc(100vw-32px)] md:w-auto p-0" align="end" sideOffset={8}>
+        <PopoverContent className="w-auto max-w-[calc(100vw-16px)] overflow-x-auto p-0" align="end" sideOffset={8}>
           <div className="flex flex-col">
             <Calendar
               initialFocus
@@ -90,10 +83,10 @@ export function DatePickerWithRange({
                 }
               }}
               numberOfMonths={isMobile ? 1 : 2}
-              className="rounded-md border-none p-2 md:p-3"
+            
               fromDate={minDate}
               toDate={new Date()}
-              disabled={{ before: minDate }}
+              disabled={minDate ? { before: minDate } : undefined}
             />
 
             <div className="border-t p-3 flex flex-col sm:flex-row items-center justify-between gap-4 bg-zinc-50/50">
@@ -107,26 +100,29 @@ export function DatePickerWithRange({
                 </div>
               </div>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 text-[11px] font-bold text-[#cd1e22] hover:text-[#b01a1d] hover:bg-red-50 px-3 transition-colors"
-                  onClick={() => setInternalDate(undefined)}
-                >
-                  Reset
-                </Button>
-                <Button
-                  size="sm"
-                  className="h-9 px-4 text-[11px] font-bold bg-[#cd1e22] hover:bg-[#b01a1d] text-white shadow-md active:scale-95 transition-all w-full sm:w-auto"
-                  onClick={() => {
-                    setDate(internalDate);
-                    setOpen(false);
-                  }}
-                >
-                  Apply
-                </Button>
-              </div>
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto sm:justify-end">
+  
+  <Button
+    variant="ghost"
+    size="sm"
+    className="h-9 text-[11px] font-bold text-[#cd1e22] hover:text-[#b01a1d] hover:bg-red-50 px-3 transition-colors w-full sm:w-auto"
+    onClick={() => setInternalDate(undefined)}
+  >
+    Reset
+  </Button>
+
+  <Button
+    size="sm"
+    className="h-9 px-4 text-[11px] font-bold bg-[#cd1e22] hover:bg-[#b01a1d] text-white shadow-md active:scale-95 transition-all w-full sm:w-auto"
+    onClick={() => {
+      setDate(internalDate);
+      setOpen(false);
+    }}
+  >
+    Apply
+  </Button>
+
+</div>
             </div>
           </div>
         </PopoverContent>

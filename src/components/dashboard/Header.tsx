@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 "use client";
 
 import { Button } from "@/components/ui/button";
@@ -48,27 +49,21 @@ export default function Header({ onRefresh, isPending }: HeaderProps) {
             className="h-10 w-10 md:h-12 md:w-12 rounded-lg object-contain"
             suppressHydrationWarning
           />
-          <div className="flex flex-col ml-2" suppressHydrationWarning>
+          <div className="flex flex-col ml-2">
             <h1 className="text-sm font-bold tracking-tight text-primary leading-tight md:text-lg">TANSI MOTORS</h1>
             <p className="text-[10px] font-bold tracking-[0.1em] text-zinc-400 uppercase leading-tight md:text-[9.8px] md:tracking-[0.2em]">Hiring Dashboard</p>
           </div>
         </div>
 
-
-
         {/* Actions Row */}
         <div className="flex items-center gap-1.5 md:gap-2">
-          <div className="flex items-center gap-1.5 rounded-full bg-zinc-100 px-2.5 py-1 border border-zinc-200/50 md:rounded-md md:px-3 md:py-1.5 md:border-border/50">
+          <div className="flex items-center gap-1.5 rounded-full bg-zinc-100 px-2.5 py-1 border border-zinc-200/50 md:rounded-lg md:px-3 md:py-2 md:border-border/50">
             <svg className="h-3 w-3 text-zinc-500 md:h-3.5 md:w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <span className="text-[10px] font-bold text-zinc-600 md:text-xs md:font-medium md:text-muted-foreground uppercase">
-              {mounted ? (
-                <>
-                  <span className="hidden md:inline">UPDATED </span>
-                  {clock}
-                </>
-              ) : "..."}
+              <span className="hidden md:inline">UPDATED </span>
+              {mounted ? clock : "00:00 AM"}
             </span>
           </div>
 
