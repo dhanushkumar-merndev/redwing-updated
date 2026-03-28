@@ -304,7 +304,7 @@ export default function AnalyticsSection() {
           ) : mounted ? (
             <ChartContainer config={chartConfig} className="h-full w-full">
               {chartType === "area" ? (
-                <AreaChart data={filteredAnalytics}>
+                <AreaChart data={filteredAnalytics} accessibilityLayer={false}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
                   <XAxis dataKey="date" className="text-[10px] md:text-xs" hide={false} />
                   <YAxis className="text-[10px] md:text-xs" width={30} />
@@ -323,7 +323,7 @@ export default function AnalyticsSection() {
                   ))}
                 </AreaChart>
               ) : (
-                <BarChart data={filteredAnalytics} margin={{ left: 6, right: 6 }} barSize={14}>
+                <BarChart data={filteredAnalytics} margin={{ left: 6, right: 6 }} barSize={14} accessibilityLayer={false}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
                   <XAxis dataKey="date" className="text-[10px] md:text-xs" />
                   <YAxis className="text-[10px] md:text-xs" width={30} />
@@ -369,6 +369,7 @@ export default function AnalyticsSection() {
                 layout="vertical"
                 margin={{ left: 0, right: 20 }}
                 barSize={14}
+                accessibilityLayer={false}
               >
                 <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
                 <XAxis type="number" className="text-[10px] md:text-xs" />

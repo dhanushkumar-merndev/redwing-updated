@@ -320,7 +320,7 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
                       Log History
                     </DialogTitle>
                   </DialogHeader>
-                  <div className="max-h-[350px] overflow-y-auto pr-2 pl-4 space-y-4 scrollbar-thin scrollbar-thumb-zinc-200 scrollbar-track-transparent">
+                  <div className="max-h-[60vh] min-h-[200px] overflow-y-auto pr-3 pl-4 pb-2 space-y-4 pointer-events-auto custom-scrollbar" data-lenis-prevent>
                     {applicant.updated.length > 0 ? (
                       applicant.updated.slice().reverse().map((dateString, i) => (
                         <div key={i} className="relative pl-6 pb-4 border-l-2 border-zinc-100 last:border-0 last:pb-0">
