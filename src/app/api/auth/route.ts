@@ -31,3 +31,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }
+
+export async function DELETE() {
+  const response = NextResponse.json({ message: "Logged out" });
+  response.cookies.delete("dashboard_auth");
+  return response;
+}

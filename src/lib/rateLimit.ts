@@ -1,6 +1,6 @@
 const store = new Map<string, { count: number; time: number }>();
 
-export function rateLimit(ip: string): boolean {
+export function rateLimit(ip: string, limit: number = 60): boolean {
   const now = Date.now();
   const windowMs = 60 * 1000;
   const entry = store.get(ip);
@@ -10,7 +10,7 @@ export function rateLimit(ip: string): boolean {
     return true;
   }
 
-  if (entry.count >= 60) return false;
+  if (entry.count >= limit) return false;
   entry.count++;
   return true;
 }

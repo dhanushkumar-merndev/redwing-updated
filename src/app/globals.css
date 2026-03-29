@@ -139,6 +139,29 @@
     @apply bg-border rounded-full hover:bg-ring transition-colors;
   }
 
+  /* Global Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #e11d48; /* Crimson / Red */
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #be123c;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #e11d48 transparent;
+  }
+
   /* Remove all focus outlines and tap highlights from chart elements */
   .recharts-wrapper *,
   .recharts-surface,
@@ -151,6 +174,13 @@
     outline: none !important;
     -webkit-tap-highlight-color: transparent;
   }
+}
+
+/* Performance optimization: Disable pointer events on complex cards while scrolling */
+/* This is toggled by the LenisProvider */
+.is-scrolling .applicant-card {
+  pointer-events: none !important;
+  user-select: none !important;
 }
 
 /* Lenis Functional CSS */

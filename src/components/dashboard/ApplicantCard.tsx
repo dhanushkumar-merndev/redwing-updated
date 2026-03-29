@@ -156,7 +156,7 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
         opacity: { duration: 0.25 },
       }}
     >
-      <Card className="group relative shadow-premium border-border/50 p-2 bg-card transition-all duration-300 hover:shadow-premium-hover hover:border-primary/40 flex flex-col h-full overflow-hidden">
+      <Card className="applicant-card group relative shadow-premium border-border/50 p-2 bg-card transition-all duration-300 hover:shadow-premium-hover hover:border-primary/40 flex flex-col h-full overflow-hidden">
         
         <CardHeader className="p-4 pb-3 space-y-0">
           <div className="flex items-start justify-between gap-3">
@@ -260,7 +260,7 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
                     variant="outline"
                     size="sm" 
                     className={cn(
-                      "h-8 md:h-10 cursor-pointer px-2 text-[10px] font-black rounded-full transition-all border border-transparent shadow-sm",
+                      "h-8 cursor-pointer px-2 text-[10px] font-black rounded-full transition-all border border-transparent shadow-sm",
                       isSelected
                         ? `${config.activeBg} ${config.color} ${config.activeBorder} shadow-inner`
                         : "bg-muted/50 text-muted-foreground hover:bg-background hover:border-border"
@@ -304,6 +304,7 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
           </div>
 
           <div className="flex items-center justify-between pt-3 border-t border-border mt-2">
+            <div>
             <div className="flex flex-col gap-0.5">
               <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-black">
                 <Clock className="w-3 h-3" />
@@ -360,7 +361,7 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
                   </div>
                 </DialogContent>
               </Dialog>
-            
+            </div>
             <Button
               onClick={handleSave}
               disabled={isPending || !hasChanges}

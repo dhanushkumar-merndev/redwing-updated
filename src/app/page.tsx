@@ -11,6 +11,7 @@ import ApplicantCard from "@/components/dashboard/ApplicantCard";
 import { useApplicants } from "@/hooks/useApplicants";
 import { useMounted } from "@/hooks/useMounted";
 import UserRegistrationDialog from "@/components/dashboard/UserRegistrationDialog";
+import SessionErrorDialog from "@/components/dashboard/SessionErrorDialog";
 
 import { getDepartment } from "@/lib/roles";
 import type { Department, ApplicantStatus, SortField, SortOrder, Role, Applicant } from "@/types";
@@ -33,7 +34,7 @@ const fadeUp = (delay = 0): Variants => ({
 });
 
 export default function DashboardPage() {
-  const { applicants, isPending, fetchApplicants, saveApplicant } = useApplicants();
+  const { applicants, isPending, fetchApplicants, saveApplicant, consecutive404Count } = useApplicants();
   const mounted = useMounted();
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
@@ -360,6 +361,7 @@ export default function DashboardPage() {
   return (
     <div className="flex min-h-screen flex-col bg-background selection:bg-primary/10 selection:text-primary">
       <UserRegistrationDialog />
+      <SessionErrorDialog consecutive404Count={consecutive404Count} />
       <Header 
         onRefresh={() => fetchApplicants(() => setLastUpdated(new Date()))} 
         isPending={isPending} 
