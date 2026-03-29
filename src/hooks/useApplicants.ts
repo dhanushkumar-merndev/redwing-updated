@@ -162,6 +162,10 @@ export const useApplicants = () => {
     []
   );
 
+  const handle404 = useCallback(() => {
+    setConsecutive404Count((prev) => prev + 1);
+  }, []);
+
   return {
     applicants,
     setApplicants,
@@ -170,5 +174,6 @@ export const useApplicants = () => {
     saveApplicant,
     addApplicant,
     consecutive404Count,
+    handle404,
   };
 };

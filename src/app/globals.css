@@ -176,9 +176,10 @@
   }
 }
 
-/* Performance optimization: Disable pointer events on complex cards while scrolling */
+/* Performance optimization: Disable pointer events on complex cards/charts while scrolling */
 /* This is toggled by the LenisProvider */
-.is-scrolling .applicant-card {
+.is-scrolling .applicant-card,
+.is-scrolling .recharts-wrapper {
   pointer-events: none !important;
   user-select: none !important;
 }

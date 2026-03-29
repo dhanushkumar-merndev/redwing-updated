@@ -34,7 +34,7 @@ const fadeUp = (delay = 0): Variants => ({
 });
 
 export default function DashboardPage() {
-  const { applicants, isPending, fetchApplicants, saveApplicant, consecutive404Count } = useApplicants();
+  const { applicants, isPending, fetchApplicants, saveApplicant, consecutive404Count, handle404 } = useApplicants();
   const mounted = useMounted();
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
@@ -224,7 +224,7 @@ export default function DashboardPage() {
   const DashboardContent = (
     <div className="space-y-4 md:space-y-8">
       <StatsRow stats={stats} />
-      <AnalyticsSection applicants={applicants} />
+      <AnalyticsSection applicants={applicants} on404={handle404} />
       {mounted && !isDesktop && (
         <Button
           onClick={() => {

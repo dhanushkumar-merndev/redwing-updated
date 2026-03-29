@@ -128,9 +128,10 @@ const analyticsVariants: Variants = {
 
 interface AnalyticsSectionProps {
   applicants: Applicant[];
+  on404?: () => void;
 }
 
-export default function AnalyticsSection({ applicants }: AnalyticsSectionProps) {
+export default function AnalyticsSection({ applicants, on404 }: AnalyticsSectionProps) {
   const [entries, setEntries]               = useState<AnalyticsEntry[]>([]);
   const [earliestDate, setEarliestDate]     = useState<Date | undefined>(undefined);
   const [chartType, setChartType]           = useState<"area" | "bar">("area");
@@ -148,7 +149,10 @@ export default function AnalyticsSection({ applicants }: AnalyticsSectionProps) 
     startTransition(async () => {
       try {
         const res  = await fetch("/api/analytics");
-        if (!res.ok) return;
+        if (!res.ok) {
+          if (res.status === 404) on404?.();
+          return;
+        }
         const data = (await res.json()) as { entries: AnalyticsEntry[] };
         const fetched = data.entries ?? [];
         setEntries(fetched);
@@ -176,7 +180,7 @@ export default function AnalyticsSection({ applicants }: AnalyticsSectionProps) 
 
       } catch { /* handle error */ }
     });
-  }, []);
+  }, [on404]);
 
   useEffect(() => { fetchAnalytics(); }, [fetchAnalytics]);
 
