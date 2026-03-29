@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
     const errors: string[] = [];
 
     if (!fullName) errors.push("full_name is required");
+    if (fullName && !/^[a-zA-Z\s]+$/.test(fullName)) errors.push("full_name must contain only letters and spaces");
     if (!/^\d{10}$/.test(phone)) errors.push("phone must be exactly 10 digits");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push("email is invalid");
     if (!ALL_ROLES.includes(position)) errors.push("position is invalid");

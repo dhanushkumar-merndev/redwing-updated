@@ -39,7 +39,6 @@ import { ROLE_SHORT_NAMES } from "@/lib/roles";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { format, isWithinInterval, startOfDay, endOfDay, parseISO, eachDayOfInterval } from "date-fns";
 import type { DateRange } from "react-day-picker";
-import type { Role } from "@/lib/roles";
 import type { AnalyticsEntry } from "@/app/api/analytics/route";
 import type { Applicant } from "@/types";
 
@@ -165,16 +164,24 @@ export default function AnalyticsSection({ applicants, on404 }: AnalyticsSection
           return new Date(y, m - 1, d); // local midnight — no UTC offset issue
         };
 
-        // Derive the earliest date dynamically from real data
+        // Derive the earliest and latest dates dynamically from real data
         if (fetched.length > 0) {
           const earliest = fetched.reduce<Date>((min, e) => {
             const d = toLocalDate(e.createdDate);
             return d < min ? d : min;
           }, toLocalDate(fetched[0].createdDate));
+
+          const latest = fetched.reduce<Date>((max, e) => {
+            const d = toLocalDate(e.createdDate);
+            return d > max ? d : max;
+          }, toLocalDate(fetched[0].createdDate));
+
           const today = new Date();
+          
           setEarliestDate(earliest);
-          setTrendDateRange((prev) => prev ?? { from: earliest, to: today });
-          setRoleDateRange((prev)  => prev ?? { from: earliest, to: today });
+          // Default range: trend/role end at last lead date, workflow ends today
+          setTrendDateRange((prev) => prev ?? { from: earliest, to: latest });
+          setRoleDateRange((prev)  => prev ?? { from: earliest, to: latest });
           setWorkflowDateRange((prev) => prev ?? { from: earliest, to: today });
         }
 
@@ -197,7 +204,13 @@ export default function AnalyticsSection({ applicants, on404 }: AnalyticsSection
     });
 
     entries.forEach((entry) => {
-      const entryDate = parseISO(entry.createdDate);
+      // Use the actual event date: completion (last update) for status changes, 
+      // or creation date for pending/initial lead.
+      const dateStr = (entry.status !== "pending" && entry.completedDate)
+        ? entry.completedDate
+        : entry.createdDate;
+
+      const entryDate = parseISO(dateStr);
       if (isWithinInterval(entryDate, { start: from, end: to })) {
         const key = format(entryDate, "dd MMM");
 
@@ -252,7 +265,7 @@ export default function AnalyticsSection({ applicants, on404 }: AnalyticsSection
     return Array.from(roleMap.entries()).map(([role, counts]) => ({
       role,
       ...counts,
-      shortRole: ROLE_SHORT_NAMES[role as Role] || role,
+      shortRole: ROLE_SHORT_NAMES[role.trim()] || role,
       fullName:  role,
     }));
   }, [entries, roleDateRange]);
@@ -586,7 +599,9 @@ export default function AnalyticsSection({ applicants, on404 }: AnalyticsSection
                   dataKey="shortRole"
                   type="category"
                   className="text-[10px] font-bold text-muted-foreground"
-                  width={40}
+                  tick={{ fontSize: 10 }}
+                  interval={0}
+                  width={44}
                   tickLine={false}
                   axisLine={false}
                 />

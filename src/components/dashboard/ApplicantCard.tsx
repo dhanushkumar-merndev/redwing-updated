@@ -201,7 +201,9 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
                     // Mobile Collapsed styles: Truncated
                     !shouldShowDetails && !isDesktop && "text-[14px] truncate text-primary"
                   )}>
-                    {applicant.full_name}
+                    {applicant.full_name.length > 20 
+                      ? `${applicant.full_name.substring(0, 20)}...` 
+                      : applicant.full_name}
                   </span>
                 </PopoverTrigger>
                 <PopoverContent side="top" align="start" className="w-auto p-2.5 text-xs font-bold shadow-xl border-primary/10 rounded-lg pointer-events-none">

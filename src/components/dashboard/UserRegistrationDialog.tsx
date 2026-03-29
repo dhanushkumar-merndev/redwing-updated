@@ -73,7 +73,10 @@ export default function UserRegistrationDialog() {
               <Input
                 id="name"
                 value={name}
-                onChange={(e) => setName(e.target.value)}
+                onChange={(e) => {
+                  const filtered = e.target.value.replace(/[^a-zA-Z\s]/g, "");
+                  setName(filtered);
+                }}
                 placeholder="Enter your name..."
                 className="h-12 rounded-2xl border-border bg-muted/50 focus:bg-background transition-all px-4 font-bold text-foreground"
                 autoFocus
