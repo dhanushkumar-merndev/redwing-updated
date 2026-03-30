@@ -3,7 +3,7 @@ import { sheets, SHEET_ID, TAB_RANGE } from "@/lib/sheets";
 import { mapRow } from "@/lib/mapRow";
 import { getCache, setCache } from "@/lib/cache";
 import { rateLimit } from "@/lib/rateLimit";
-import type { ApplicantStatus } from "@/types";
+import type { Applicant, ApplicantStatus } from "@/types";
 
 export interface AnalyticsEntry {
   id: string;
@@ -36,7 +36,9 @@ export async function GET(req: NextRequest) {
     });
 
     const rows = response.data.values ?? [];
-    const applicants = rows.slice(1).map((row, index) => mapRow(row, index));
+    const applicants = rows.slice(1)
+      .map((row, index) => mapRow(row, index))
+      .filter((a): a is Applicant => a !== null);
 
     const stats = { pending: 0, interested: 0, inprocess: 0, rejected: 0 };
     const entries: AnalyticsEntry[] = [];
