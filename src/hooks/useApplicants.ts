@@ -9,6 +9,8 @@ import { toast } from "sonner";
 export const useApplicants = () => {
   const [applicants, setApplicants] = useState<Applicant[]>([]);
   const [isPending, startTransition] = useTransition();
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [isAdding, setIsAdding] = useState(false);
   const [consecutive404Count, setConsecutive404Count] = useState(0);
   const refreshHistory = useRef<number[]>([]);
 
@@ -72,6 +74,7 @@ export const useApplicants = () => {
 
   const saveApplicant = useCallback(
     (id: string, data: Partial<Applicant>, onComplete?: () => void) => {
+      setUpdatingId(id);
       startTransition(async () => {
         try {
           // Get identity
@@ -96,22 +99,28 @@ export const useApplicants = () => {
             return;
           }
 
-          // Re-fetch all to sync state
+          // Optimistically update the UI locally
+          setApplicants((prev) => 
+            prev.map((app) => 
+              app.id === id ? { ...app, ...data } : app
+            )
+          );
+
+          onComplete?.(); // Complete UI feedback loop early
+
+          // Re-fetch in background to sync with Sheet (id generation/timestamps)
           const res = await fetch("/api/applicants");
           if (res.ok) {
             setConsecutive404Count(0);
             const refreshed = (await res.json()) as { applicants: Applicant[] };
             setApplicants(refreshed.applicants ?? []);
-          } else if (res.status === 429) {
-            // Silence toast on auto-refresh to avoid double alerts
-            console.warn("Auto-refresh frequency limited");
-          } else if (res.status === 404) {
-            setConsecutive404Count((prev) => prev + 1);
           }
         } catch (error) {
           console.error("Save error:", error);
+          onComplete?.();
+        } finally {
+          setUpdatingId(null);
         }
-        onComplete?.();
       });
     },
     []
@@ -119,6 +128,7 @@ export const useApplicants = () => {
 
   const addApplicant = useCallback(
     (data: Omit<Applicant, "id" | "created_time" | "updated">, onComplete?: () => void) => {
+      setIsAdding(true);
       startTransition(async () => {
         try {
           // Get identity
@@ -143,20 +153,21 @@ export const useApplicants = () => {
             setConsecutive404Count((prev) => prev + 1);
           }
 
+          onComplete?.(); // UI feedback logic handle complete
+
+          // Re-fetch all to get the new ID and sync
           const res = await fetch("/api/applicants");
           if (res.ok) {
             setConsecutive404Count(0);
             const refreshed = (await res.json()) as { applicants: Applicant[] };
             setApplicants(refreshed.applicants ?? []);
-          } else if (res.status === 429) {
-            console.warn("Auto-refresh limited");
-          } else if (res.status === 404) {
-            setConsecutive404Count((prev) => prev + 1);
           }
         } catch (error) {
           console.error("Add error:", error);
+          onComplete?.();
+        } finally {
+          setIsAdding(false);
         }
-        onComplete?.();
       });
     },
     []
@@ -170,6 +181,8 @@ export const useApplicants = () => {
     applicants,
     setApplicants,
     isPending,
+    updatingId,
+    isAdding,
     fetchApplicants,
     saveApplicant,
     addApplicant,

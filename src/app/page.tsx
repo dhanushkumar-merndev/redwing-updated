@@ -22,7 +22,8 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { getFromDB } from "@/lib/db";
 import { decryptName } from "@/lib/crypto";
 
-const ITEMS_PER_PAGE = 12;
+const ITEMS_PER_PAGE = 9;
+
 
 const fadeUp = (delay = 0): Variants => ({
   hidden: { opacity: 0, y: 15 },
@@ -34,7 +35,7 @@ const fadeUp = (delay = 0): Variants => ({
 });
 
 export default function DashboardPage() {
-  const { applicants, isPending, fetchApplicants, saveApplicant, consecutive404Count, handle404 } = useApplicants();
+  const { applicants, isPending, updatingId, fetchApplicants, saveApplicant, consecutive404Count, handle404 } = useApplicants();
   const mounted = useMounted();
   const isDesktop = useMediaQuery("(min-width: 768px)");
 
@@ -47,6 +48,8 @@ export default function DashboardPage() {
   const [displayLimit, setDisplayLimit] = useState(ITEMS_PER_PAGE);
   const [activeMobileView, setActiveMobileView] = useState<"dashboard" | "applicants">("dashboard");
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  
+  
   
   // -- Identity & Motivation --
   const [userName, setUserName] = useState<string>("User");
@@ -83,7 +86,8 @@ export default function DashboardPage() {
   }, [fetchApplicants]);
 
   useEffect(() => {
-    resizeLenis();
+    const timer = setTimeout(() => resizeLenis(), 100);
+    return () => clearTimeout(timer);
   }, [applicants, displayLimit, activeDepartment, activeStatus]);
 
   const handleFilterChange = useCallback((updater: () => void) => {
@@ -178,6 +182,8 @@ export default function DashboardPage() {
     onStatusChange: (s: ApplicantStatus | "all") => handleFilterChange(() => setActiveStatus(s)),
   };
 
+
+
   const WelcomeHeader = useMemo(() => {
     const hour = new Date().getHours();
     let greeting = "Good Evening";
@@ -222,7 +228,7 @@ export default function DashboardPage() {
   }, [userName, quoteIndex, quotes]);
 
   const DashboardContent = (
-    <div className="space-y-4 md:space-y-8">
+    <div className="space-y-3">
       <StatsRow stats={stats} />
       <AnalyticsSection applicants={applicants} on404={handle404} />
       {mounted && !isDesktop && (
@@ -293,26 +299,28 @@ export default function DashboardPage() {
       <div className="min-h-[600px] relative">
         <AnimatePresence mode="wait">
           {applicants.length === 0 && isPending ? (
-            <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 md:gap-4">
+            <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 md:gap-4 p-1">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className="rounded-3xl border border-border bg-card p-4 space-y-4">
+                <div key={i} className="rounded-3xl border border-border bg-card p-4 space-y-4 min-h-[220px] md:min-h-[440px]">
                   <div className="flex justify-between items-start">
                     <div className="space-y-2.5 flex-1">
-                      <Skeleton className="h-5 w-3/4 rounded-lg" />
+                      <Skeleton className="h-6 w-3/4 rounded-xl" />
                       <div className="flex items-center gap-1.5">
-                        <Skeleton className="h-3 w-8 rounded-md" />
-                        <Skeleton className="h-3 w-16 rounded-md" />
+                        <Skeleton className="h-4 w-12 rounded-lg" />
+                        <div className="text-border/40">/</div>
+                        <Skeleton className="h-4 w-24 rounded-lg" />
                       </div>
                     </div>
-                    <Skeleton className="h-6 w-20 rounded-full" />
+                    <Skeleton className="h-7 w-24 rounded-full" />
                   </div>
-                  <div className="bg-background rounded-2xl p-2.5 space-y-2">
+                  <div className="bg-muted/30 rounded-2xl p-4 space-y-3">
                     <Skeleton className="h-10 w-full rounded-xl" />
                     <Skeleton className="h-10 w-full rounded-xl" />
+                    <Skeleton className="h-10 w-full rounded-xl" />
                   </div>
-                  <div className="flex gap-2 pt-1">
-                    <Skeleton className="h-9 flex-1 rounded-xl" />
-                    <Skeleton className="h-9 w-24 rounded-xl" />
+                  <div className="flex gap-2 pt-2">
+                    <Skeleton className="h-10 flex-1 rounded-full" />
+                    <Skeleton className="h-10 w-24 rounded-full" />
                   </div>
                 </div>
               ))}
@@ -333,20 +341,36 @@ export default function DashboardPage() {
           ) : (
             <motion.div key="results" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-6">
               <LayoutGroup>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 md:gap-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 md:gap-4 p-1">
                   <AnimatePresence mode="popLayout" initial={false}>
                     {filteredApplicants.slice(0, displayLimit).map((applicant, i) => (
-                      <ApplicantCard key={applicant.id} applicant={applicant} onSave={saveApplicant} isPending={isPending} index={i} />
+                      <ApplicantCard 
+                        key={applicant.id} 
+                        applicant={applicant} 
+                        onSave={saveApplicant} 
+                        isPending={isPending} 
+                        isSaving={updatingId === applicant.id}
+                        index={i} 
+                        isDesktop={isDesktop}
+                      />
                     ))}
                   </AnimatePresence>
                 </div>
               </LayoutGroup>
               {filteredApplicants.length > displayLimit && (
                 <div className="flex items-center justify-center gap-3 pt-6 flex-col sm:flex-row">
-                  <Button variant="outline" onClick={() => setDisplayLimit(prev => prev + ITEMS_PER_PAGE)} className="w-full sm:w-auto font-bold text-xs px-8 rounded-full h-10 transition-all bg-secondary! hover:text-secondary-foreground! cursor-pointer">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setDisplayLimit(prev => prev + ITEMS_PER_PAGE)} 
+                    className="w-full sm:w-auto font-bold text-xs px-8 rounded-full h-10 transition-all bg-secondary! hover:text-secondary-foreground! cursor-pointer"
+                  >
                     Load More ({filteredApplicants.length - displayLimit} left)
                   </Button>
-                  <Button variant="ghost" onClick={() => setDisplayLimit(filteredApplicants.length)} className="w-full sm:w-auto font-bold text-xs px-8 rounded-full h-10 transition-all bg-primary! text-primary-foreground! cursor-pointer hover:bg-primary/80!">
+                  <Button 
+                    variant="ghost" 
+                    onClick={() => setDisplayLimit(filteredApplicants.length)} 
+                    className="w-full sm:w-auto font-bold text-xs px-8 rounded-full h-10 transition-all bg-primary! text-primary-foreground! cursor-pointer hover:bg-primary/80!"
+                  >
                     View All Applicants
                   </Button>
                 </div>

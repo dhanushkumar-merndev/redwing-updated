@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { motion, type Variants } from "framer-motion";
 import type { StatsData } from "@/types";
 
@@ -37,12 +38,12 @@ const cardVariants: Variants = {
   },
 };
 
-export default function StatsRow({ stats }: StatsRowProps) {
+const StatsRow = memo(function StatsRow({ stats }: StatsRowProps) {
   const total = stats.pending + stats.interested + stats.rejected + stats.inprocess;
 
   return (
     <motion.div
-      className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4"
+      className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4 p-1"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
@@ -85,4 +86,6 @@ export default function StatsRow({ stats }: StatsRowProps) {
       })}
     </motion.div>
   );
-}
+});
+
+export default StatsRow;

@@ -1,7 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition, useEffect, useCallback } from "react";
-import { useMounted } from "@/hooks/useMounted";
+import { useMemo, useState, useTransition, useEffect, useCallback, memo, useDeferredValue } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -41,6 +40,9 @@ import { format, isWithinInterval, startOfDay, endOfDay, parseISO, eachDayOfInte
 import type { DateRange } from "react-day-picker";
 import type { AnalyticsEntry } from "@/app/api/analytics/route";
 import type { Applicant } from "@/types";
+import { ChartNoAxesCombined, BarChart3, FileSpreadsheet, Filter } from "lucide-react";
+
+// ─── Constants & Config ──────────────────────────────────────────────────────
 
 const chartConfig = {
   pending:    { label: "Pending",    color: "var(--chart-1)" },
@@ -52,11 +54,7 @@ const chartConfig = {
   newLeads:   { label: "Actually Pending (New)", color: "var(--chart-4)" },
 } as const;
 
-
 const STATUS_KEYS = ["pending", "interested", "inprocess", "rejected"] as const;
-
-
-
 
 interface AggregatedPoint {
   date: string;
@@ -66,63 +64,221 @@ interface AggregatedPoint {
   rejected: number;
 }
 
-// ─── Pill shape: upright bars (Trends bar chart) ────────────────────────────
-// Rounds only the top two corners so bars sit flush on the axis baseline.
-const PillBarUpright = (props: { x: number; y: number; width: number; height: number; fill?: string; }) => {
-  const { x, y, width, height, fill = "" } = props;
+const isStatus = (s: string): s is keyof Omit<AggregatedPoint, "date"> => {
+  return (STATUS_KEYS as readonly string[]).includes(s);
+};
+
+// ─── Sub-Components (Memoized) ────────────────────────────────────────────────
+
+interface PillBarProps {
+  x?: number;
+  y?: number;
+  width?: number;
+  height?: number;
+  fill?: string;
+  isFirst?: boolean;
+  isLast?: boolean;
+}
+
+/**
+ * PillBarUpright: Rounds only the top two corners for vertical bars.
+ */
+const PillBarUpright = memo((props: PillBarProps) => {
+  const { x = 0, y = 0, width = 0, height = 0, fill = "" } = props;
   if (!width || !height || height <= 0 || width <= 0) return null;
   const r = Math.min(width / 2, 6);
   return (
     <path
-      d={`
-        M ${x + r},${y}
-        H ${x + width - r}
-        Q ${x + width},${y} ${x + width},${y + r}
-        V ${y + height}
-        H ${x}
-        V ${y + r}
-        Q ${x},${y} ${x + r},${y}
-        Z
-      `}
+      d={`M ${x + r},${y} H ${x + width - r} Q ${x + width},${y} ${x + width},${y + r} V ${y + height} H ${x} V ${y + r} Q ${x},${y} ${x + r},${y} Z`}
       fill={fill}
     />
   );
-};
+});
+PillBarUpright.displayName = "PillBarUpright";
 
-// ─── Pill shape: horizontal stacked bars (Role Breakdown) ───────────────────
-// Rounds only the outermost ends of the full stack so each row reads as one pill.
-const PillBarHorizontal = (props: { x: number; y: number; width: number; height: number; fill?: string; isFirst: boolean; isLast: boolean; }) => {
-  const { x, y, width, height, fill = "", isFirst, isLast } = props;
+/**
+ * PillBarHorizontal: Rounds ends of stacked horizontal bars.
+ */
+const PillBarHorizontal = memo((props: PillBarProps) => {
+  const { x = 0, y = 0, width = 0, height = 0, fill = "", isFirst, isLast } = props;
   if (!width || !height || height <= 0 || width <= 0) return null;
   const r  = Math.min(height / 2, 7);
   const lR = isFirst ? r : 0;
   const rR = isLast  ? r : 0;
   return (
     <path
-      d={`
-        M ${x + lR},${y}
-        H ${x + width - rR}
-        Q ${x + width},${y} ${x + width},${y + r}
-        V ${y + height - r}
-        Q ${x + width},${y + height} ${x + width - rR},${y + height}
-        H ${x + lR}
-        Q ${x},${y + height} ${x},${y + height - r}
-        V ${y + r}
-        Q ${x},${y} ${x + lR},${y}
-        Z
-      `}
+      d={`M ${x + lR},${y} H ${x + width - rR} Q ${x + width},${y} ${x + width},${y + r} V ${y + height - r} Q ${x + width},${y + height} ${x + width - rR},${y + height} H ${x + lR} Q ${x},${y + height} ${x},${y + height - r} V ${y + r} Q ${x},${y} ${x + lR},${y} Z`}
       fill={fill}
     />
   );
-};
+});
+PillBarHorizontal.displayName = "PillBarHorizontal";
+
+/**
+ * 📈 TrendChart: Isolated Trend rendering
+ */
+const TrendChart = memo(({ data, type, activeKeys }: { data: AggregatedPoint[], type: "area" | "bar", activeKeys: (keyof typeof chartConfig)[] }) => {
+  if (data.length === 0) return <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No data in range</div>;
+  
+  return (
+    <ChartContainer config={chartConfig} className="h-full w-full px-2">
+      {type === "area" ? (
+        <AreaChart data={data} accessibilityLayer={false}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
+          <XAxis dataKey="date" className="text-[10px]" tickMargin={12} />
+          <YAxis className="text-[10px]" width={40} />
+          <ChartTooltip content={<ChartTooltipContent />} />
+          {activeKeys.map((key) => (
+            <Area
+              key={key}
+              type="monotone"
+              dataKey={key}
+              fill={chartConfig[key as keyof typeof chartConfig].color}
+              stroke={chartConfig[key as keyof typeof chartConfig].color}
+              fillOpacity={0.12}
+              strokeWidth={2}
+              animationDuration={600}
+            />
+          ))}
+        </AreaChart>
+      ) : (
+        <BarChart data={data} margin={{ left: 15, right: 15, top: 10, bottom: 10 }} barSize={14} accessibilityLayer={false}>
+          <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
+          <XAxis dataKey="date" className="text-[10px]" tickMargin={8} />
+          <YAxis className="text-[10px]" width={35} />
+          <ChartTooltip content={<ChartTooltipContent />} />
+          {activeKeys.map((key) => (
+            <Bar
+              key={key}
+              dataKey={key}
+              fill={chartConfig[key as keyof typeof chartConfig].color}
+              animationDuration={600}
+              shape={(p: PillBarProps) => <PillBarUpright {...p} />}
+            />
+          ))}
+        </BarChart>
+      )}
+    </ChartContainer>
+  );
+});
+TrendChart.displayName = "TrendChart";
+
+/**
+ * 📊 RoleBreakdownChart: Isolated Role rendering
+ */
+const RoleBreakdownChart = memo(({ data }: { data: (Omit<AggregatedPoint, "date"> & { shortRole: string, fullName: string })[] }) => {
+  if (data.length === 0) return <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No data in range</div>;
+
+  return (
+    <ChartContainer config={chartConfig} className="h-full w-full px-2">
+      <BarChart
+        data={data}
+        layout="vertical"
+        margin={{ left: 10, right: 25, top: 10, bottom: 10 }}
+        barSize={14}
+        accessibilityLayer={false}
+      >
+        <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} className="stroke-border/50" />
+        <XAxis type="number" className="text-[10px]" />
+        <YAxis
+          dataKey="shortRole"
+          type="category"
+          className="text-[9px] font-bold text-muted-foreground"
+          width={75}
+          tickLine={false}
+          axisLine={false}
+          interval={0}
+        />
+        <ChartTooltip
+          cursor={{ fill: "transparent" }}
+          content={<ChartTooltipContent labelFormatter={(v, p) => p?.[0]?.payload?.fullName || v} />}
+        />
+        {STATUS_KEYS.map((key, i) => (
+          <Bar
+            key={key}
+            dataKey={key}
+            fill={chartConfig[key].color}
+            stackId="a"
+            animationDuration={600}
+            shape={(p: PillBarProps) => (
+              <PillBarHorizontal
+                {...p}
+                isFirst={i === 0}
+                isLast={i === STATUS_KEYS.length - 1}
+              />
+            )}
+          />
+        ))}
+      </BarChart>
+    </ChartContainer>
+  );
+});
+RoleBreakdownChart.displayName = "RoleBreakdownChart";
+
+/**
+ * ⚡ WorkflowEfficiencyChart: Isolated Workflow rendering
+ */
+interface WorkflowPoint {
+  date: string;
+  backlog: number;
+  completed: number;
+  newLeads: number;
+}
+
+const WorkflowEfficiencyChart = memo(({ data, mode, tooltip: WorkflowTooltip }: { data: WorkflowPoint[], mode: string, tooltip: React.ComponentType<{ active?: boolean, payload?: { dataKey: string, value: number, name: string, color: string }[] }> }) => {
+  if (data.length === 0) return <div className="flex h-full items-center justify-center text-xs text-muted-foreground">Calculating metrics...</div>;
+
+  return (
+    <ChartContainer config={chartConfig} className="h-full w-full px-2">
+      <AreaChart data={data} margin={{ left: 10, right: 10, top: 10, bottom: 0 }} accessibilityLayer={false}>
+        <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
+        <XAxis dataKey="date" className="text-[10px]" />
+        <YAxis className="text-[10px]" width={35} />
+        <ChartTooltip content={<WorkflowTooltip />} />
+        
+        <Area
+          type="monotone"
+          dataKey="newLeads"
+          fill={chartConfig.newLeads.color}
+          stroke={chartConfig.newLeads.color}
+          fillOpacity={0.05}
+          strokeWidth={2}
+          animationDuration={800}
+        />
+
+        {mode === "carry" && (
+          <Area
+            type="monotone"
+            dataKey="backlog"
+            fill={chartConfig.backlog.color}
+            stroke={chartConfig.backlog.color}
+            fillOpacity={0.08}
+            strokeWidth={2}
+            animationDuration={800}
+          />
+        )}
+
+        <Area
+          type="monotone"
+          dataKey="completed"
+          fill={chartConfig.completed.color}
+          stroke={chartConfig.completed.color}
+          fillOpacity={0.15}
+          strokeWidth={2}
+          animationDuration={800}
+        />
+      </AreaChart>
+    </ChartContainer>
+  );
+});
+WorkflowEfficiencyChart.displayName = "WorkflowEfficiencyChart";
+
+
+// ─── Main Component (Memoized) ────────────────────────────────────────────────
 
 const analyticsVariants: Variants = {
-  hidden:  { opacity: 0, y: 20 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] as const, delay: 0.15 },
-  },
+  hidden:  { opacity: 0, y: 10 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut", delay: 0.1 } },
 };
 
 interface AnalyticsSectionProps {
@@ -130,19 +286,29 @@ interface AnalyticsSectionProps {
   on404?: () => void;
 }
 
-export default function AnalyticsSection({ applicants, on404 }: AnalyticsSectionProps) {
+const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: AnalyticsSectionProps) {
   const [entries, setEntries]               = useState<AnalyticsEntry[]>([]);
+  const deferredEntries                     = useDeferredValue(entries);
+  
   const [earliestDate, setEarliestDate]     = useState<Date | undefined>(undefined);
   const [chartType, setChartType]           = useState<"area" | "bar">("area");
   const [statusFilter, setStatusFilter]     = useState<string>("all");
+  
   const [trendDateRange, setTrendDateRange] = useState<DateRange | undefined>(undefined);
   const [roleDateRange, setRoleDateRange]   = useState<DateRange | undefined>(undefined);
   const [workflowDateRange, setWorkflowDateRange] = useState<DateRange | undefined>(undefined);
+  
   const [workflowMode, setWorkflowMode]     = useState<"carry" | "unique">("carry");
   const [isCSVModalOpen, setIsCSVModalOpen] = useState(false);
   const [csvDateRange, setCSVDateRange]     = useState<DateRange | undefined>(undefined);
-  const mounted = useMounted();
+  
   const [, startTransition] = useTransition();
+
+  // Helper date parser
+  const toLocalDate = useCallback((dateStr: string): Date => {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }, []);
 
   const fetchAnalytics = useCallback(() => {
     startTransition(async () => {
@@ -156,15 +322,6 @@ export default function AnalyticsSection({ applicants, on404 }: AnalyticsSection
         const fetched = data.entries ?? [];
         setEntries(fetched);
         
-        console.log("Analytics Entries Loaded:", fetched.length);
-
-        // Parse "YYYY-MM-DD" as LOCAL date (not UTC) to avoid timezone shifting
-        const toLocalDate = (dateStr: string): Date => {
-          const [y, m, d] = dateStr.split("-").map(Number);
-          return new Date(y, m - 1, d); // local midnight — no UTC offset issue
-        };
-
-        // Derive the earliest and latest dates dynamically from real data
         if (fetched.length > 0) {
           const earliest = fetched.reduce<Date>((min, e) => {
             const d = toLocalDate(e.createdDate);
@@ -176,268 +333,158 @@ export default function AnalyticsSection({ applicants, on404 }: AnalyticsSection
             return d > max ? d : max;
           }, toLocalDate(fetched[0].createdDate));
 
-          const today = new Date();
-          
           setEarliestDate(earliest);
-          // Default range: trend/role end at last lead date, workflow ends today
           setTrendDateRange((prev) => prev ?? { from: earliest, to: latest });
           setRoleDateRange((prev)  => prev ?? { from: earliest, to: latest });
-          setWorkflowDateRange((prev) => prev ?? { from: earliest, to: today });
+          setWorkflowDateRange((prev) => prev ?? { from: earliest, to: new Date() });
         }
-
-      } catch { /* handle error */ }
+      } catch (err) { console.error("Analytics fetch error:", err); }
     });
-  }, [on404]);
+  }, [on404, toLocalDate]);
 
   useEffect(() => { fetchAnalytics(); }, [fetchAnalytics]);
 
-  // ── Aggregate: Trends ──────────────────────────────────────────────────────
-  const filteredAnalytics = useMemo(() => {
-    if (!entries.length || !trendDateRange?.from) return [];
-    const from    = startOfDay(trendDateRange.from);
-    const to      = endOfDay(trendDateRange.to || trendDateRange.from);
-    const dateMap = new Map<string, Omit<AggregatedPoint, "date">>();
+  // Aggregation Logic (Now using deferred entries for buttery scroll)
+  const trendData = useMemo(() => {
+    if (!deferredEntries.length || !trendDateRange?.from) return [];
+    const from = startOfDay(trendDateRange.from);
+    const to   = endOfDay(trendDateRange.to || trendDateRange.from);
+    const map  = new Map<string, AggregatedPoint>();
 
-    // Pre-populate with all days in range to avoid truncation
     eachDayOfInterval({ start: from, end: to }).forEach((day) => {
-      dateMap.set(format(day, "dd MMM"), { pending: 0, interested: 0, inprocess: 0, rejected: 0 });
+      map.set(format(day, "dd MMM"), { date: format(day, "dd MMM"), pending: 0, interested: 0, inprocess: 0, rejected: 0 });
     });
 
-    entries.forEach((entry) => {
-      // Use the actual event date: completion (last update) for status changes, 
-      // or creation date for pending/initial lead.
-      const dateStr = (entry.status !== "pending" && entry.completedDate)
-        ? entry.completedDate
-        : entry.createdDate;
-
-      const entryDate = parseISO(dateStr);
-      if (isWithinInterval(entryDate, { start: from, end: to })) {
-        const key = format(entryDate, "dd MMM");
-
-        const counts = dateMap.get(key);
-        if (counts && entry.status in counts)
-          counts[entry.status as keyof typeof counts]++;
+    deferredEntries.forEach((e) => {
+      const dateStr = (e.status !== "pending" && e.completedDate) ? e.completedDate : e.createdDate;
+      const d = parseISO(dateStr);
+      if (isWithinInterval(d, { start: from, end: to })) {
+        const key = format(d, "dd MMM");
+        const point = map.get(key);
+        if (point && isStatus(e.status)) {
+          point[e.status]++;
+        }
       }
     });
 
-    const result: AggregatedPoint[] = Array.from(dateMap.entries()).map(
-      ([date, counts]) => {
-        const total = counts.pending + counts.interested + counts.inprocess + counts.rejected;
-        return { date, ...counts, total };
-      }
-    );
+    const result = Array.from(map.values());
     if (statusFilter === "all") return result;
-    return result.map((p) => {
-      const statusKey = statusFilter as keyof Omit<AggregatedPoint, "date">;
-      const val = p[statusKey] || 0;
-      return {
-        date:       p.date,
-        pending:    statusFilter === "pending"    ? val : 0,
-        interested: statusFilter === "interested" ? val : 0,
-        inprocess:  statusFilter === "inprocess"  ? val : 0,
-        rejected:   statusFilter === "rejected"   ? val : 0,
-        total:      val,
-      } as AggregatedPoint & { total: number };
-    });
+    return result.map(p => ({
+      ...p,
+      pending:    statusFilter === "pending"    ? p.pending : 0,
+      interested: statusFilter === "interested" ? p.interested : 0,
+      inprocess:  statusFilter === "inprocess"  ? p.inprocess : 0,
+      rejected:   statusFilter === "rejected"   ? p.rejected : 0,
+    }));
+  }, [deferredEntries, trendDateRange, statusFilter]);
 
-  }, [entries, statusFilter, trendDateRange]);
+  const roleData = useMemo(() => {
+    if (!deferredEntries.length || !roleDateRange?.from) return [];
+    const from = startOfDay(roleDateRange.from);
+    const to   = endOfDay(roleDateRange.to || roleDateRange.from);
+    const map  = new Map<string, Omit<AggregatedPoint, "date">>();
 
-
-  // ── Aggregate: Role Breakdown ──────────────────────────────────────────────
-  const formattedRoleData = useMemo(() => {
-    if (!entries.length || !roleDateRange?.from) return [];
-    const from    = startOfDay(roleDateRange.from);
-    const to      = endOfDay(roleDateRange.to || roleDateRange.from);
-    const roleMap = new Map<string, Omit<AggregatedPoint, "date">>();
-
-    entries.forEach((entry) => {
-      const entryDate = parseISO(entry.createdDate);
-      if (isWithinInterval(entryDate, { start: from, end: to })) {
-        if (!roleMap.has(entry.role))
-          roleMap.set(entry.role, { pending: 0, interested: 0, inprocess: 0, rejected: 0 });
-
-        const counts = roleMap.get(entry.role)!;
-        if (entry.status in counts)
-          counts[entry.status as keyof typeof counts]++;
+    deferredEntries.forEach((e) => {
+      const d = parseISO(e.createdDate);
+      if (isWithinInterval(d, { start: from, end: to })) {
+        if (!map.has(e.role)) map.set(e.role, { pending: 0, interested: 0, inprocess: 0, rejected: 0 });
+        const counts = map.get(e.role)!;
+        if (isStatus(e.status)) {
+          counts[e.status]++;
+        }
       }
     });
 
-    return Array.from(roleMap.entries()).map(([role, counts]) => ({
-      role,
-      ...counts,
-      shortRole: ROLE_SHORT_NAMES[role.trim()] || role,
-      fullName:  role,
+    return Array.from(map.entries()).map(([role, counts]) => ({
+      role, ...counts, shortRole: ROLE_SHORT_NAMES[role.trim()] || role, fullName: role
     }));
-  }, [entries, roleDateRange]);
-  
-  // ── Aggregate: Workflow Efficiency (Backlog vs Completed) ──────────────────
+  }, [deferredEntries, roleDateRange]);
+
   const workflowData = useMemo(() => {
-    if (!entries.length || !workflowDateRange?.from) return [];
-    
+    if (!deferredEntries.length || !workflowDateRange?.from) return [];
     const from = startOfDay(workflowDateRange.from);
     const to   = endOfDay(workflowDateRange.to || workflowDateRange.from);
+    const dateList = eachDayOfInterval({ start: from, end: to }).map(d => format(d, "yyyy-MM-dd"));
 
-    // Helper to parse "YYYY-MM-DD" safely as local date
-    const toLocalDate = (dateStr: string): Date => {
-      const [y, m, d] = dateStr.split("-").map(Number);
-      return new Date(y, m - 1, d);
-    };
-
-    // Get list of dates in the range for display
-    const dateList: string[] = eachDayOfInterval({ start: from, end: to }).map((day) =>
-      format(day, "yyyy-MM-dd")
-    );
-
-    // If carry forward, we need to know the state before the range starts
-    let cumulativeCreated = 0;
-    let cumulativeCompleted = 0;
-
+    let cCreated = 0, cCompleted = 0;
     if (workflowMode === "carry") {
-      entries.forEach(e => {
-        const d = toLocalDate(e.createdDate);
-        if (d < from) cumulativeCreated++;
-        if (e.completedDate) {
-          const cd = toLocalDate(e.completedDate);
-          if (cd < from) cumulativeCompleted++;
-        }
+      deferredEntries.forEach(e => {
+        if (toLocalDate(e.createdDate) < from) cCreated++;
+        if (e.completedDate && toLocalDate(e.completedDate) < from) cCompleted++;
       });
     }
 
-    return dateList.map((dateStr) => {
-      const d = toLocalDate(dateStr);
-      
-      const createdToday = entries.filter(e => e.createdDate === dateStr).length;
-      const completedToday = entries.filter(e => e.completedDate === dateStr).length;
-
+    return dateList.map(str => {
+      const d = toLocalDate(str);
+      const createdToday = deferredEntries.filter(e => e.createdDate === str).length;
+      const completedToday = deferredEntries.filter(e => e.completedDate === str).length;
       if (workflowMode === "carry") {
-        cumulativeCreated += createdToday;
-        cumulativeCompleted += completedToday;
-        
-        return {
-          date: format(d, "dd MMM"),
-          backlog: Math.max(0, cumulativeCreated - cumulativeCompleted),
-          completed: completedToday,
-          newLeads: createdToday,
-        };
-      } else {
-        // Unique Mode: Just show the daily counts
-        return {
-          date: format(d, "dd MMM"),
-          backlog: createdToday,
-          completed: completedToday,
-          newLeads: createdToday,
-        };
+        cCreated += createdToday; cCompleted += completedToday;
+        return { date: format(d, "dd MMM"), backlog: Math.max(0, cCreated - cCompleted), completed: completedToday, newLeads: createdToday };
       }
+      return { date: format(d, "dd MMM"), backlog: createdToday, completed: completedToday, newLeads: createdToday };
     });
-  }, [entries, workflowDateRange, workflowMode]);
-  
-  // Custom tooltip to filter out the backlog metric in unique mode without leaving gaps
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const WorkflowTooltip = useCallback((props: { active?: boolean; payload?: any[]; label?: string }) => {
+  }, [deferredEntries, workflowDateRange, workflowMode, toLocalDate]);
+
+  const WorkflowTooltip = useCallback((props: { active?: boolean, payload?: { dataKey: string, value: number, name: string, color: string }[] }) => {
     const { payload, active } = props;
     if (!active || !payload?.length) return null;
-    
-    const filteredPayload = workflowMode === "unique"
-      ? payload.filter((item) => item.dataKey !== "backlog")
-      : payload;
-      
-    return <ChartTooltipContent {...props} payload={filteredPayload} />;
+    const filtered = workflowMode === "unique" ? payload.filter((i) => i.dataKey !== "backlog") : payload;
+    return <ChartTooltipContent {...props} payload={filtered as unknown as React.ComponentProps<typeof ChartTooltipContent>["payload"]} />;
   }, [workflowMode]);
 
-
-
-
-  const handleCSVExport = () => {
-    if (!csvDateRange?.from) {
-      console.warn("CSV Export: No start date selected.");
-      return;
-    }
+  const handleCSVExport = useCallback(() => {
+    if (!csvDateRange?.from) return;
     const from = startOfDay(csvDateRange.from);
     const to   = endOfDay(csvDateRange.to || csvDateRange.from);
 
-    console.log(`CSV Export: Start=${from}, End=${to}, TotalApplicants=${applicants.length}`);
-
     const filtered = applicants.filter((a) => {
-      // Try parsing as ISO, fallback to direct native parser
       let d = parseISO(a.created_time);
-      if (isNaN(d.getTime())) {
-        d = new Date(a.created_time);
-      }
-      
-      if (isNaN(d.getTime())) {
-        console.error(`CSV Export: Invalid date for applicant ${a.full_name}: ${a.created_time}`);
-        return false;
-      }
-      
-      return isWithinInterval(d, { start: from, end: to });
+      if (isNaN(d.getTime())) d = new Date(a.created_time);
+      return !isNaN(d.getTime()) && isWithinInterval(d, { start: from, end: to });
     });
 
-    console.log(`CSV Export: Found ${filtered.length} matching records.`);
-
-    if (filtered.length === 0) {
-      alert("No applicant records found for the selected date range.");
-      return;
-    }
-
+    if (filtered.length === 0) { alert("No records found."); return; }
     const headers = ["Created Time", "Name", "Position", "Email", "Phone", "Status", "Feedback"];
-    const rows    = filtered.map((a) => {
-      let d = parseISO(a.created_time);
-      if (isNaN(d.getTime())) {
-        d = new Date(a.created_time);
-      }
-      
-      const dateStr = isNaN(d.getTime()) ? a.created_time : format(d, "yyyy-MM-dd HH:mm:ss");
-
-      return [
-        dateStr,
-        `"${a.full_name.replace(/"/g, '""')}"`,
-        `"${a.position}"`,
-        a.email,
-        a.phone,
-        a.status,
-        `"${a.feedback.replace(/"/g, '""')}"`,
-      ].join(",");
+    const rows = filtered.map(a => {
+      let d = parseISO(a.created_time); if (isNaN(d.getTime())) d = new Date(a.created_time);
+      return [isNaN(d.getTime()) ? a.created_time : format(d, "yyyy-MM-dd HH:mm:ss"), `"${a.full_name.replace(/"/g, '""')}"`, `"${a.position}"`, a.email, a.phone, a.status, `"${a.feedback.replace(/"/g, '""')}"`].join(",");
     });
 
-    const csv  = [headers.join(","), ...rows].join("\n");
+    const csv = [headers.join(","), ...rows].join("\n");
     const blob = new Blob([csv], { type: "text/csv" });
-    const url  = URL.createObjectURL(blob);
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.href     = url;
-    link.download = `applicants_${format(from, "yyyyMMdd")}_${format(to, "yyyyMMdd")}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-    setIsCSVModalOpen(false);
-  };
+    link.href = url; link.download = `applicants_${format(from, "yyyyMMdd")}.csv`; link.click();
+    URL.revokeObjectURL(url); setIsCSVModalOpen(false);
+  }, [applicants, csvDateRange]);
 
-  const activeKeys =
-    statusFilter === "all"
-      ? STATUS_KEYS
-      : STATUS_KEYS.filter((k) => k === statusFilter);
+  const activeTrendKeys = useMemo(() => statusFilter === "all" ? STATUS_KEYS : [statusFilter], [statusFilter]);
 
   return (
     <motion.div
-      className="grid gap-3 md:grid-cols-2 md:gap-4"
+      className="grid gap-4 md:grid-cols-2 performance-chart p-1"
       variants={analyticsVariants}
       initial="hidden"
       animate="visible"
     >
-      {/* ── Trend Chart ───────────────────────────────────────────────────── */}
-      <Card className="shadow-premium overflow-hidden transition-all duration-300 hover:shadow-premium-hover">
-        <CardHeader className="py-4 px-6 md:px-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xs font-bold text-muted-foreground md:text-sm">
-              Application Trends
+      {/* 📈 Trends Chart */}
+      <Card className="rounded-2xl bg-card shadow-sm border-border/10 hover:shadow-md transition-all duration-300 min-h-[360px]">
+        <CardHeader className="py-4 px-6 space-y-4">
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+              <ChartNoAxesCombined className="w-3 h-3" /> Application Trends
             </CardTitle>
             <DatePickerWithRange date={trendDateRange} setDate={setTrendDateRange} minDate={earliestDate} />
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1.5 p-0.5 bg-background rounded-lg border border-border">
+            {/* Chart Type Toggle */}
+            <div className="flex items-center p-1 bg-muted/30 rounded-xl border border-border/40">
               <Button
                 variant={chartType === "area" ? "secondary" : "ghost"}
                 size="sm"
-                className="h-7 text-[10px] px-2.5 font-bold shadow-none hover:bg-background"
+                className="h-7 text-[10px] px-3 font-bold rounded-lg shadow-sm"
                 onClick={() => setChartType("area")}
               >
                 Line
@@ -445,293 +492,111 @@ export default function AnalyticsSection({ applicants, on404 }: AnalyticsSection
               <Button
                 variant={chartType === "bar" ? "secondary" : "ghost"}
                 size="sm"
-                className="h-7 text-[10px] px-2.5 font-bold shadow-none hover:bg-background"
+                className="h-7 text-[10px] px-3 font-bold rounded-lg shadow-sm"
                 onClick={() => setChartType("bar")}
               >
                 Bar
               </Button>
             </div>
 
+            {/* CSV Export */}
             <Dialog open={isCSVModalOpen} onOpenChange={setIsCSVModalOpen}>
-              <DialogTrigger
+              <DialogTrigger 
                 render={
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-8 text-[10px] px-3 font-bold text-foreground hover:text-primary"
-                  >
-                    CSV
-                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-9 w-9 p-0 rounded-xl border-dashed hover:bg-primary/5 hover:text-primary transition-colors"
+                  />
                 }
-              />
-              <DialogContent className="sm:max-w-[425px] rounded-3xl">
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md rounded-[2rem] p-8 border-primary/20">
                 <DialogHeader>
-                  <DialogTitle className="text-xl font-bold text-foreground">Export Applicants CSV</DialogTitle>
+                  <DialogTitle className="text-2xl font-black italic text-primary">EXPORT PERFORMANCE</DialogTitle>
                 </DialogHeader>
-                <div className="py-2 space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Select a date range to export all applicant records within that period.
-                  </p>
-                  <div className="flex flex-col gap-2">
-                    <label className="text-xs font-bold text-foreground uppercase tracking-wider">Date Range</label>
-                    <DatePickerWithRange 
-                      date={csvDateRange} 
-                      setDate={setCSVDateRange} 
-                      minDate={earliestDate}
-                    />
-                  </div>
+                <div className="py-2 space-y-6">
+                  <p className="text-sm text-muted-foreground font-medium">Export raw candidate data for external auditing.</p>
+                  <DatePickerWithRange date={csvDateRange} setDate={setCSVDateRange} minDate={earliestDate} />
                 </div>
-                <DialogFooter>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => setIsCSVModalOpen(false)}
-                    className="rounded-xl font-bold text-xs hover:text-primary hover:bg-transparent cursor-pointer"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    onClick={handleCSVExport}
-                    disabled={!csvDateRange?.from}
-                    className="bg-primary text-primary-foreground hover:bg-primary/80 cursor-pointer rounded-xl font-bold text-xs px-6"
-                  >
-                    Download CSV
-                  </Button>
+                <DialogFooter className="gap-2">
+                  <Button variant="ghost" onClick={() => setIsCSVModalOpen(false)} className="rounded-2xl font-bold">CLOSE</Button>
+                  <Button onClick={handleCSVExport} disabled={!csvDateRange?.from} className="bg-primary hover:scale-105 transition-transform rounded-2xl font-bold px-8">DOWNLOAD CSV</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
 
-            <div className="h-4 w-px bg-border mx-1" />
+            <div className="h-6 w-px bg-border/40 mx-1" />
 
-            <Select value={statusFilter} onValueChange={(v) => v && setStatusFilter(v)}>
-              <SelectTrigger className="h-8 w-28 text-[10px] md:w-32 md:text-xs border-border bg-background focus:ring-1">
-                <SelectValue placeholder="Status" />
+            {/* Status Filter */}
+            <Select value={statusFilter} onValueChange={(v) => startTransition(() => setStatusFilter(v as keyof typeof chartConfig))}>
+              <SelectTrigger className="h-9 w-36 text-xs font-bold border-border/60 bg-background/50 rounded-xl hover:border-primary/40 transition-colors">
+                <div className="flex items-center gap-2 truncate">
+                  <Filter className="w-3 h-3 text-muted-foreground" />
+                  <SelectValue placeholder="STATUS: ALL" />
+                </div>
               </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Lines</SelectItem>
-                <SelectSeparator />
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="interested">Interested</SelectItem>
-                <SelectItem value="inprocess">In Process</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
+              <SelectContent className="rounded-2xl border-primary/10">
+                <SelectItem value="all" className="font-bold text-xs">ALL PERFORMANCE</SelectItem>
+                <div className="h-px bg-border/40 my-1 mx-1" />
+                <SelectItem value="pending" className="text-chart-1 font-bold text-xs">PENDING</SelectItem>
+                <SelectItem value="interested" className="text-chart-3 font-bold text-xs">INTERESTED</SelectItem>
+                <SelectItem value="inprocess" className="text-chart-4 font-bold text-xs">IN PROCESS</SelectItem>
+                <SelectItem value="rejected" className="text-chart-2 font-bold text-xs">REJECTED</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </CardHeader>
-
-        <CardContent className="h-56 p-3 pr-6 pt-0 md:h-64 md:py-4 md:pr-6 md:pt-0">
-          {filteredAnalytics.length === 0 ? (
-            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              No data in selected range
-            </div>
-          ) : mounted ? (
-            <ChartContainer config={chartConfig} className="h-full w-full">
-              {chartType === "area" ? (
-                <AreaChart data={filteredAnalytics} accessibilityLayer={false}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
-                  <XAxis dataKey="date" className="text-[10px] md:text-xs" hide={false} />
-                  <YAxis className="text-[10px] md:text-xs" width={30} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  {activeKeys.map((key) => (
-                    <Area
-                      key={key}
-                      type="monotone"
-                      dataKey={key}
-                      fill={chartConfig[key].color}
-                      stroke={chartConfig[key].color}
-                      fillOpacity={0.15}
-                      strokeWidth={2}
-                      animationDuration={2000}
-                    />
-                  ))}
-                </AreaChart>
-              ) : (
-                <BarChart data={filteredAnalytics} margin={{ left: 6, right: 6 }} barSize={14} accessibilityLayer={false}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
-                  <XAxis dataKey="date" className="text-[10px] md:text-xs" />
-                  <YAxis className="text-[10px] md:text-xs" width={30} />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  {activeKeys.map((key) => (
-                    <Bar
-                      key={key}
-                      dataKey={key}
-                      fill={chartConfig[key].color}
-                      animationDuration={2000}
-                      shape={(p) => <PillBarUpright {...p} />}
-                    />
-                  ))}
-                </BarChart>
-              )}
-            </ChartContainer>
-          ) : (
-            <div className="h-full w-full bg-background rounded-lg animate-pulse" />
+        <CardContent className="h-[240px] px-5 pb-5 pt-0">
+          {!deferredEntries.length && trendData.length === 0 ? <div className="h-full w-full bg-muted/20 animate-pulse rounded-2xl" /> : (
+            <TrendChart data={trendData} type={chartType} activeKeys={activeTrendKeys as (keyof typeof chartConfig)[]} />
           )}
         </CardContent>
       </Card>
 
-      {/* ── Role Breakdown ────────────────────────────────────────────────── */}
-      <Card className="shadow-premium overflow-hidden transition-all duration-300 hover:shadow-premium-hover">
-        <CardHeader className="py-4 px-6 md:px-6 pb-16 space-y-4">
+      {/* 📊 Role Breakdown Chart */}
+      <Card className="rounded-2xl bg-card shadow-sm border border-border/50 hover:shadow-md transition-all duration-300 min-h-[360px]">
+        <CardHeader className="py-4 px-6 space-y-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-xs font-bold text-muted-foreground md:text-sm">
-              Role Breakdown
+            <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
+              <BarChart3 className="w-3 h-3" /> Role Breakdown
             </CardTitle>
             <DatePickerWithRange date={roleDateRange} setDate={setRoleDateRange} minDate={earliestDate} />
           </div>
         </CardHeader>
-
-        <CardContent className="h-56 p-3 pt-0 md:h-64 md:p-4 md:pt-0">
-          {formattedRoleData.length === 0 ? (
-            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              No data in range
-            </div>
-          ) : mounted ? (
-            <ChartContainer config={chartConfig} className="h-full w-full">
-              <BarChart
-                data={formattedRoleData}
-                layout="vertical"
-                margin={{ left: 0, right: 20 }}
-                barSize={14}
-                accessibilityLayer={false}
-              >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
-                <XAxis type="number" className="text-[10px] md:text-xs" />
-                <YAxis
-                  dataKey="shortRole"
-                  type="category"
-                  className="text-[10px] font-bold text-muted-foreground"
-                  tick={{ fontSize: 10 }}
-                  interval={0}
-                  width={44}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <ChartTooltip
-                  cursor={{ fill: "transparent" }}
-                  content={
-                    <ChartTooltipContent
-                      labelFormatter={(value, payload) =>
-                        payload?.[0]?.payload?.fullName || value
-                      }
-                    />
-                  }
-                />
-                {STATUS_KEYS.map((key, i) => (
-                  <Bar
-                    key={key}
-                    dataKey={key}
-                    fill={chartConfig[key].color}
-                    stackId="a"
-                    animationDuration={2000}
-                    shape={(p) => (
-                      <PillBarHorizontal
-                        {...p}
-                        isFirst={i === 0}
-                        isLast={i === STATUS_KEYS.length - 1}
-                      />
-                    )}
-                  />
-                ))}
-              </BarChart>
-            </ChartContainer>
-          ) : (
-            <div className="h-full w-full bg-background rounded-lg animate-pulse" />
-          )}
+        <CardContent className="h-[280px] px-5 pb-5 pt-0">
+          <RoleBreakdownChart data={roleData} />
         </CardContent>
       </Card>
 
-      {/* ── Workflow Efficiency Chart ─────────────────────────────────────── */}
-      <Card className="md:col-span-2 shadow-premium overflow-hidden transition-all duration-300 hover:shadow-premium-hover">
-        <CardHeader className="py-4 px-6 md:px-6 space-y-4">
-          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-            <div>
-              <CardTitle className="text-xs font-bold text-muted-foreground md:text-sm">
-                Workflow Efficiency & Backlog
-              </CardTitle>
-              <p className="text-[10px] md:text-xs text-muted-foreground">
-                {workflowMode === "carry" 
-                  ? "Comparing total carry-forward backlog vs. daily lead completions."
-                  : "Comparing daily new leads vs. daily lead completions."}
+      {/* ⚡ Workflow Efficiency */}
+      <Card className="md:col-span-2 rounded-2xl bg-card shadow-sm border border-border/50 hover:shadow-md transition-all duration-300">
+        <CardHeader className="py-4 px-6 space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <CardTitle className="text-xs font-bold text-muted-foreground">Workflow Efficiency & Lag Response</CardTitle>
+              <p className="text-[10px] text-muted-foreground/80 leading-relaxed max-w-sm">
+                {workflowMode === "carry" ? "Total cumulative backlog vs. daily closures." : "Daily unique velocity of leads and closures."}
               </p>
             </div>
-
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 ml-auto">
+            <div className="flex items-center gap-3 ml-auto">
               <DatePickerWithRange date={workflowDateRange} setDate={setWorkflowDateRange} minDate={earliestDate} />
-              <Tabs 
-                value={workflowMode} 
-                onValueChange={(v) => setWorkflowMode(v as "carry" | "unique")}
-                className="w-auto"
-              >
-                <TabsList className="bg-background border border-border p-0.5 h-7">
-                  <TabsTrigger value="carry" className="text-[10px] font-bold h-6 px-3">
-                    Carry Forward
-                  </TabsTrigger>
-                  <TabsTrigger value="unique" className="text-[10px] font-bold h-6 px-3">
-                    Daily Unique
-                  </TabsTrigger>
+              <Tabs value={workflowMode} onValueChange={(v) => startTransition(() => setWorkflowMode(v as "carry" | "unique"))} className="h-8 p-1 bg-muted/30 rounded-xl border border-border/40">
+                <TabsList className="h-full bg-transparent p-0 gap-1">
+                  <TabsTrigger value="carry" className="h-full text-[9px] font-black uppercase px-4 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">CARRY</TabsTrigger>
+                  <TabsTrigger value="unique" className="h-full text-[9px] font-black uppercase px-4 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">DAILY</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
           </div>
         </CardHeader>
-
-        <CardContent className="h-64 p-3 pr-6 pt-0 md:h-72 md:py-4 md:pr-6 md:pt-0">
-          {workflowData.length === 0 ? (
-            <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
-              Generating workflow metrics...
-            </div>
-          ) : mounted ? (
-            <ChartContainer config={chartConfig} className="h-full w-full">
-              <AreaChart data={workflowData} accessibilityLayer={false}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
-                <XAxis dataKey="date" className="text-[10px] md:text-xs" />
-                <YAxis className="text-[10px] md:text-xs" width={30} />
-                <ChartTooltip content={<WorkflowTooltip />} />
-                
-                {/* New Leads (Line) */}
-                <Area
-                  type="monotone"
-                  dataKey="newLeads"
-                  fill={chartConfig.newLeads.color}
-                  stroke={chartConfig.newLeads.color}
-                  fillOpacity={0.05}
-                  strokeWidth={2}
-                  animationDuration={2500}
-                />
-
-                {/* Backlog Area (Only show in Carry Forward mode) */}
-                {workflowMode === "carry" && (
-                  <Area
-                    type="monotone"
-                    dataKey="backlog"
-                    fill={chartConfig.backlog.color}
-                    stroke={chartConfig.backlog.color}
-                    fillOpacity={0.1}
-                    strokeWidth={2}
-                    animationDuration={2500}
-                  />
-                )}
-
-                {/* Completed Area */}
-                <Area
-                  type="monotone"
-                  dataKey="completed"
-                  fill={chartConfig.completed.color}
-                  stroke={chartConfig.completed.color}
-                  fillOpacity={0.2}
-                  strokeWidth={2}
-                  animationDuration={2500}
-                />
-              </AreaChart>
-            </ChartContainer>
-          ) : (
-            <div className="h-full w-full bg-background rounded-lg animate-pulse" />
-          )}
+        <CardContent className="h-[280px] px-5 pb-5 pt-0">
+          <WorkflowEfficiencyChart data={workflowData} mode={workflowMode} tooltip={WorkflowTooltip} />
         </CardContent>
       </Card>
     </motion.div>
-
   );
-}
+});
 
-// Avoids hydration text-node collisions
-const SelectSeparator = () => <div className="h-px bg-border/50 my-1 mx-[-4px]" />;
+export default AnalyticsSection;

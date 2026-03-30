@@ -129,6 +129,22 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /* GPU Acceleration hints for cards */
+  .applicant-card {
+    will-change: transform, opacity;
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+    contain: layout style paint;
+  }
+
+  /* 🚀 Performance Isolation for Charts */
+  .performance-chart {
+    transform: translateZ(0);
+    will-change: transform;
+    contain: layout paint;
+  }
+
   .custom-scrollbar::-webkit-scrollbar {
     width: 4px;
   }

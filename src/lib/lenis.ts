@@ -16,14 +16,14 @@ export const getLenis = (forceNew = false): Lenis => {
       smoothWheel: true,
       wheelMultiplier: 1,
       touchMultiplier: 1.5,
-      lerp: 0.1,
+      lerp: 0.15,
+      syncTouch: false,
     });
 
     // Handle frame updates
-    let rafId: number;
     const raf = (time: number) => {
       lenisInstance?.raf(time);
-      rafId = requestAnimationFrame(raf);
+      requestAnimationFrame(raf);
     }
     requestAnimationFrame(raf);
   }

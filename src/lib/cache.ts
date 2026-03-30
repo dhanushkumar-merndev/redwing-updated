@@ -12,7 +12,7 @@ export const getCache = <T>(key: string): T | null => {
 export const setCache = (key: string, data: unknown): void => {
   cache.set(key, {
     data,
-    expiry: 0, // Disabled for now as per user request (was 1000 * 60 * 5)
+    expiry: Date.now() + 1000 * 60 * 10, // 10 minute TTL
   });
 };
 

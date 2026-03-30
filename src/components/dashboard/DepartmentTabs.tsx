@@ -40,7 +40,7 @@ export default function DepartmentTabs({
   return (
     <div className="flex flex-col gap-4 w-full min-w-0 overflow-hidden">
       {/* Department Selector (Full width on mobile) */}
-      <div className="flex w-full sm:w-fit h-11 items-center gap-1 rounded-2xl bg-muted p-1 shadow-inner ring-1 ring-border/50">
+      <div className="flex w-full sm:w-fit h-11 items-center gap-1 rounded-2xl bg-muted p-1 shadow-inner ring-1 ring-border/50 ml-1">
         {DEPARTMENTS.map((dept) => {
           const isActive = activeDepartment === dept.value;
           return (

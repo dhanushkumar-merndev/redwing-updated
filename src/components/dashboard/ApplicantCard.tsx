@@ -38,63 +38,75 @@ import { cn } from "@/lib/utils";
 import type { Applicant, ApplicantStatus } from "@/types";
 import { scrollToPosition } from "@/lib/lenis";
 
-import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface ApplicantCardProps {
   applicant: Applicant;
   onSave: (id: string, data: Partial<Applicant>, onComplete: () => void) => void;
   isPending: boolean;
+  isSaving: boolean;
   index: number;
+  isDesktop: boolean;
 }
 
-const statusConfig: Record<ApplicantStatus, { 
-  label: string; 
-  color: string; 
-  bgColor: string; 
-  borderColor: string; 
-  activeBorder: string;
-  activeBg: string;
-  icon: React.ElementType 
-}> = {
-  pending: { 
-    label: "Pending", 
-    color: "text-chart-1", 
-    bgColor: "bg-chart-1/10", 
+const statusConfig: Record<
+  ApplicantStatus,
+  {
+    label: string;
+    color: string;
+    hoverColor: string;
+    bgColor: string;
+    borderColor: string;
+    activeBorder: string;
+    activeBg: string;
+    icon: React.ElementType;
+  }
+> = {
+  pending: {
+    label: "Pending",
+    color: "text-chart-1",
+    hoverColor: "hover:text-chart-1",
+    bgColor: "bg-chart-1/10",
     borderColor: "border-chart-1/10",
     activeBorder: "ring-2 ring-chart-1/20 border-chart-1",
     activeBg: "bg-chart-1/50",
-    icon: CircleDashed 
+    icon: CircleDashed,
   },
-  rejected: { 
-    label: "Rejected", 
-    color: "text-chart-2", 
-    bgColor: "bg-chart-2/10", 
+
+  rejected: {
+    label: "Rejected",
+    color: "text-chart-2",
+    hoverColor: "hover:text-chart-2",
+    bgColor: "bg-chart-2/10",
     borderColor: "border-chart-2/10",
     activeBorder: "ring-2 ring-chart-2/20 border-chart-2",
     activeBg: "bg-chart-2/50",
-    icon: XCircle 
+    icon: XCircle,
   },
-  interested: { 
-    label: "Interested", 
-    color: "text-chart-3", 
-    bgColor: "bg-chart-3/10", 
+
+  interested: {
+    label: "Interested",
+    color: "text-chart-3",
+    hoverColor: "hover:text-chart-3",
+    bgColor: "bg-chart-3/10",
     borderColor: "border-chart-3/10",
     activeBorder: "ring-2 ring-chart-3/20 border-chart-3",
     activeBg: "bg-chart-3/50",
-    icon: CheckCircle 
+    icon: CheckCircle,
   },
-  inprocess: { 
-    label: "In Process", 
-    color: "text-chart-4", 
-    bgColor: "bg-chart-4/10", 
+
+  inprocess: {
+    label: "In Process",
+    color: "text-chart-4",
+    hoverColor: "hover:text-chart-4",
+    bgColor: "bg-chart-4/10",
     borderColor: "border-chart-4/10",
     activeBorder: "ring-2 ring-chart-4/20 border-chart-4",
     activeBg: "bg-chart-4/50",
-    icon: RefreshCw 
+    icon: RefreshCw,
   },
 };
 
-export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, isPending }: ApplicantCardProps) {
+export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, isPending, isSaving, isDesktop }: ApplicantCardProps) {
   const [formData, setFormData] = useState<Partial<Applicant>>({
     status: applicant.status,
     feedback: applicant.feedback,
@@ -102,7 +114,6 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
 
   const [isNameOpen, setIsNameOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
-  const isDesktop = useMediaQuery("(min-width: 768px)");
 
   const hasChanges = useMemo(() => {
     return formData.status !== applicant.status || formData.feedback !== applicant.feedback;
@@ -135,7 +146,8 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
 
     const savedScrollY = window.scrollY;
     onSave(applicant.id, formData, () => {
-      const statusLabel = formData.status ? statusConfig[formData.status].label : "Updated";
+      const currentConfig = formData.status ? (statusConfig[formData.status as ApplicantStatus] || statusConfig.pending) : statusConfig.pending;
+      const statusLabel = currentConfig.label;
       const message = `Successfully updated ${applicant.full_name}`;
       const description = `Record moved to ${statusLabel}`;
       
@@ -147,7 +159,7 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
     });
   };
 
-  const currentStatus = statusConfig[applicant.status];
+  const currentStatus = statusConfig[applicant.status as ApplicantStatus] || statusConfig.pending;
   const CurrentStatusIcon = currentStatus.icon;
 
   const shouldShowDetails = isDesktop || isExpanded;
@@ -155,22 +167,26 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
   return (
     <motion.div
       layout="position"
-      initial={false}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0, transition: { duration: 0.15, ease: "easeOut" } }}
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ 
+        opacity: 0, 
+        scale: 0.9,
+        transition: { duration: 0.2, ease: "circIn" } 
+      }}
       transition={{
         layout: {
           type: "spring",
-          stiffness: 200,
-          damping: 28,
-          mass: 0.8,
+          stiffness: 300,
+          damping: 30,
+          mass: 0.5,
         },
-        opacity: { duration: 0.25 },
+        opacity: { duration: 0.2 },
       }}
     >
       <Card className={cn(
-        "applicant-card group relative shadow-premium border-border/50 bg-card transition-all duration-300 flex flex-col h-full overflow-hidden",
-        shouldShowDetails || isDesktop ? "p-2 hover:shadow-premium-hover hover:border-primary/40" : "p-0"
+        "applicant-card group relative rounded-2xl bg-card shadow-sm border border-border/50 transition-all duration-300 flex flex-col h-full overflow-hidden hover:shadow-md",
+        shouldShowDetails || isDesktop ? "p-2" : "p-0"
       )}>
         
         <CardHeader 
@@ -314,32 +330,32 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
               <div className="grid grid-cols-3 gap-1.5">
                 {(["rejected", "interested", "inprocess"] as const).map((s) => {
                   const isSelected = formData.status === s;
-                  const config = statusConfig[s];
+                  const config = statusConfig[s as ApplicantStatus] || statusConfig.pending;
                   const StatusIcon = config.icon;
 
                   return (
-                    <Button
-                      key={s}
-                      variant="outline"
-                      size="sm" 
-                      className={cn(
-                        "h-8 cursor-pointer px-2 text-[10px] font-black rounded-full transition-all border border-transparent shadow-sm",
-                        isSelected
-                          ? `${config.activeBg} ${config.color} ${config.activeBorder} shadow-inner`
-                          : "bg-muted/50 text-muted-foreground hover:bg-background hover:border-border"
-                      )}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFormData((prev) => ({
-                          ...prev,
-                          status: isSelected ? "pending" : s,
-                        }));
-                      }}
-                      disabled={isPending}
-                    >
-                      <StatusIcon className="w-3.5 h-3.5 mr-1.5 opacity-80" />
-                      {config.label}
-                    </Button>
+                  <Button
+                    key={s}
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "h-8 cursor-pointer px-2 text-[10px] font-black rounded-full transition-all border border-transparent shadow-sm",
+                      isSelected
+                        ? `${config.activeBg} ${config.color} ${config.activeBorder} shadow-inner ${config.hoverColor}`
+                        : `bg-muted/50 text-muted-foreground hover:bg-background hover:border-border ${config.hoverColor}`
+                    )}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFormData((prev) => ({
+                        ...prev,
+                        status: isSelected ? "pending" : s,
+                      }));
+                    }}
+                    disabled={isPending}
+                  >
+                    <StatusIcon className="w-3.5 h-3.5 mr-1.5 opacity-80" />
+                    {config.label}
+                  </Button>
                   );
                 })}
               </div>
@@ -432,21 +448,21 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
               </div>
               <Button
                 onClick={(e) => { e.stopPropagation(); handleSave(); }}
-                disabled={isPending || !hasChanges}
+                disabled={isPending || isSaving || !hasChanges}
                 size="lg"
                 className={cn(
                   "h-10 px-4 font-black text-[11px] uppercase tracking-widest transition-all active:scale-95 shadow-lg rounded-full",
-                  hasChanges && !isPending 
+                  hasChanges && !isSaving 
                     ? "bg-primary text-white shadow-primary/30 hover:shadow-primary/40 hover:translate-y-[-1px]" 
                     : "bg-muted text-muted-foreground shadow-none border border-border"
                 )}
               >
-                {isPending ? (
+                {isSaving ? (
                   <RefreshCw size={14} className="animate-spin mr-2" />
                 ) : (
                   <Save size={14} className="mr-2" />
                 )}
-                {isPending ? "UPDATING" : "SAVE LEAD"}
+                {isSaving ? "SAVING..." : "SAVE LEAD"}
               </Button>
             </div>
           </CardContent>
