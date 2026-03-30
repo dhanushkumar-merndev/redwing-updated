@@ -87,10 +87,13 @@ export async function decryptName(encryptedBase64: string): Promise<string> {
   if (!isSecureContext()) return "";
 
   try {
+    const binary = atob(encryptedBase64);
+    if (binary.length < 28) { // 12 IV + 16 Tag
+      return "";
+    }
+
     const combined = new Uint8Array(
-      atob(encryptedBase64)
-        .split("")
-        .map((c) => c.charCodeAt(0))
+      binary.split("").map((c) => c.charCodeAt(0))
     );
 
     const iv = combined.slice(0, 12);
@@ -106,7 +109,9 @@ export async function decryptName(encryptedBase64: string): Promise<string> {
 
     return new TextDecoder().decode(decrypted);
   } catch (error) {
-    console.error("Decryption failed:", error);
+    // Decryption mismatch is expected during migrations or if data is stale.
+    // Silent failure ensures a smooth registration dialog trigger.
+    console.warn("Crypto: Decryption failed (likely stale identity data).", error);
     return "";
   }
 }

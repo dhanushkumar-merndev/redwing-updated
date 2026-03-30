@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
@@ -58,23 +60,38 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter dashboard password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="h-11"
-                disabled={isPending}
-                autoFocus
-              />
+              <div className="relative group">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter dashboard password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="h-11 pr-10 focus-visible:ring-1 transition-all"
+                  disabled={isPending}
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  disabled={isPending}
+                  tabIndex={-1}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
               {error && (
-                <p className="text-sm font-medium text-destructive">{error}</p>
+                <p className="text-sm font-medium text-destructive animate-in fade-in slide-in-from-top-1">{error}</p>
               )}
             </div>
             <Button
               type="submit"
-              className="w-full h-11 bg-primary text-primary-foreground hover:bg-primary/80"
+              className="w-full h-11 bg-primary text-primary-foreground hover:bg-primary/80 active:scale-[0.98] transition-all"
               disabled={isPending || !password}
             >
               {isPending ? "Signing in..." : "Sign In"}

@@ -384,7 +384,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex min-h-screen flex-col bg-background selection:bg-primary/10 selection:text-primary">
-      <UserRegistrationDialog />
+      <UserRegistrationDialog onSuccess={setUserName} />
       <SessionErrorDialog consecutive404Count={consecutive404Count} />
       <Header 
         onRefresh={() => fetchApplicants(() => setLastUpdated(new Date()))} 

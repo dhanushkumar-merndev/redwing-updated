@@ -8,7 +8,7 @@ import type { Applicant, Role, ApplicantStatus } from "@/types";
 
 export async function GET(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for") ?? "127.0.0.1";
-  if (!rateLimit(ip, 10)) {
+  if (!rateLimit(ip, 60)) {
     return NextResponse.json({ error: "Too Many Requests" }, { status: 429 });
   }
 

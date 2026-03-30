@@ -15,7 +15,11 @@ import { Label } from "@/components/ui/label";
 import { getFromDB, saveToDB } from "@/lib/db";
 import { encryptName, decryptName } from "@/lib/crypto";
 
-export default function UserRegistrationDialog() {
+interface UserRegistrationDialogProps {
+  onSuccess?: (name: string) => void;
+}
+
+export default function UserRegistrationDialog({ onSuccess }: UserRegistrationDialogProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -28,6 +32,10 @@ export default function UserRegistrationDialog() {
       } else {
         const decrypted = await decryptName(String(encrypted));
         if (!decrypted) {
+          // If we have data but can't decrypt it, it's corrupted/stale.
+          // Clear it to prevent the OperationError loop.
+          const { clearDB } = await import("@/lib/db");
+          await clearDB();
           setIsOpen(true);
         }
       }
@@ -45,8 +53,9 @@ export default function UserRegistrationDialog() {
       const encrypted = await encryptName(trimmed);
       await saveToDB(encrypted);
       setIsOpen(false);
-      // Reload to ensure all components get the new identity
-      window.location.reload();
+      
+      // Notify parent instead of reloading the whole page
+      onSuccess?.(trimmed);
     } catch (error) {
       console.error("Failed to save identity:", error);
     } finally {
@@ -84,7 +93,7 @@ export default function UserRegistrationDialog() {
               />
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="border-t border-border bg-transparent">
             <Button 
               type="submit" 
               disabled={isSubmitting || name.trim().length < 2}
