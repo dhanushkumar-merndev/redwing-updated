@@ -392,7 +392,7 @@ export default function DashboardPage() {
         lastUpdated={lastUpdated}
       />
 
-      <main className="mx-auto w-full max-w-7xl px-4 py-4 space-y-4 md:px-6 md:py-8 md:space-y-8">
+      <main className="mx-auto w-full max-w-7xl px-[var(--dash-container-padding)] py-[var(--dash-container-padding)] space-y-[var(--dash-gap)] md:space-y-[var(--dash-section-gap)]">
         {mounted && isDesktop && WelcomeHeader}
 
         {mounted ? (

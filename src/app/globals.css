@@ -58,6 +58,20 @@
   --shadow-premium-hover: 0 30px 60px -12px oklch(0 0 0 / 0.05), 0 15px 40px -10px oklch(0 0 0 / 0.03);
   --tracking-normal: 0em;
   --spacing: 0.25rem;
+
+  /* 💎 Dashboard Specific Design Tokens */
+  --dash-card-padding: 1rem;
+  --dash-card-radius: 1.25rem;
+  --dash-gap: 1rem;
+  --dash-transition-fast: 200ms;
+  --dash-transition-slow: 400ms;
+  --dash-border-opacity: 0.1;
+  --dash-border: oklch(0.922 0 0 / 0.15);
+  --dash-chart-opacity: 0.12;
+
+  /* 🏗️ Layout Tokens */
+  --dash-container-padding: 1.5rem;
+  --dash-section-gap: 2rem;
 }
 
 @theme inline {
@@ -116,9 +130,6 @@
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
   body {
     @apply bg-background text-foreground antialiased;
     font-feature-settings: "ss01", "ss03", "cv01", "cv03", "cv04";

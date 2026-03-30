@@ -38,7 +38,7 @@ export default function Header({ onRefresh, isPending, lastUpdated }: HeaderProp
     >
       <div className="flex items-center justify-between px-4 py-2.5 md:px-6 md:py-3">
         {/* Logo + Brand */}
-        <div className="flex items-center gap-2 md:gap-3">
+        <div className="flex items-center gap-[var(--dash-gap)]">
           <img
             src="/image.webp"
             alt="Tansi Motors Logo"
@@ -52,8 +52,8 @@ export default function Header({ onRefresh, isPending, lastUpdated }: HeaderProp
         </div>
 
         {/* Actions Row */}
-        <div className="flex items-center gap-1.5 md:gap-2">
-          <div className="flex items-center gap-1.5 rounded-full bg-muted/50 px-2.5 py-1 border border-border/50 md:rounded-lg md:px-3 md:py-2 md:border-border/50">
+        <div className="flex items-center gap-[var(--dash-gap)]">
+          <div className="flex items-center gap-1.5 rounded-full bg-muted/50 px-2.5 py-1 border border-[var(--dash-border)] md:rounded-[var(--dash-card-radius)] md:px-3 md:py-2 md:border-[var(--dash-border)]">
             <svg className="h-3 w-3 text-muted-foreground md:h-3.5 md:w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>

@@ -2,6 +2,7 @@
 
 import { memo } from "react";
 import { motion, type Variants } from "framer-motion";
+import { Card } from "@/components/ui/card";
 import type { StatsData } from "@/types";
 
 interface StatsRowProps {
@@ -43,7 +44,7 @@ const StatsRow = memo(function StatsRow({ stats }: StatsRowProps) {
 
   return (
     <motion.div
-      className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-4 p-1"
+      className="grid grid-cols-2 gap-[var(--dash-gap)] md:grid-cols-4 p-1"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
@@ -53,7 +54,7 @@ const StatsRow = memo(function StatsRow({ stats }: StatsRowProps) {
 
         return (
           <motion.div key={stat.key} variants={cardVariants}>
-            <div className="rounded-2xl bg-card shadow-sm border border-border/50 hover:shadow-md transition-shadow p-3 md:p-4 flex flex-col gap-3">
+            <Card className="rounded-[var(--dash-card-radius)] border-[var(--dash-border)] bg-card shadow-sm hover:shadow-md transition-all duration-[var(--dash-transition-fast)] p-[var(--dash-card-padding)] flex flex-col gap-[var(--dash-gap)]">
 
               {/* Top row: label pill + percentage pill */}
               <div className="flex items-center justify-between gap-2">
@@ -80,7 +81,7 @@ const StatsRow = memo(function StatsRow({ stats }: StatsRowProps) {
                 />
               </div>
 
-            </div>
+            </Card>
           </motion.div>
         );
       })}

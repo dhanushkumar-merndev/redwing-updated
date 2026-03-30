@@ -71,10 +71,10 @@ export default function FilterBar({
     (sortField !== "created_time" || sortOrder !== "desc" ? 1 : 0);
 
   return (
-    <div className="flex flex-col gap-3 mb-2 sm:flex-row sm:items-center">
+    <div className="flex flex-col gap-[var(--dash-gap)] mb-1 sm:flex-row sm:items-center">
       {/* Search Input */}
 
-<div className="relative w-full sm:w-80">
+<div className="relative w-full  sm:w-80">
   
   {/* 🔍 Search Icon */}
   <svg
@@ -119,7 +119,7 @@ export default function FilterBar({
     placeholder="Quick search..."
     value={searchQuery}
     onChange={(e) => onSearchChange(e.target.value)}
-    className="h-10 w-full pl-9 pr-9 text-sm rounded-xl border-border bg-background focus:ring-0 focus:border-border/80 shadow-premium/50"
+    className="h-10  w-full pl-9 pr-9 text-sm rounded-[var(--dash-card-radius)] border-[var(--dash-border)] bg-background focus:ring-0 focus:border-border/80 shadow-premium/50"
   />
 </div>
       {/* Filter Popover */}
@@ -141,7 +141,7 @@ export default function FilterBar({
           <PopoverTrigger
             className={cn(
               buttonVariants({ variant: "outline" }),
-              "h-10 px-4 rounded-xl border-border font-semibold text-xs flex items-center gap-2 hover:bg-muted shadow-premium transition-all duration-300"
+              "h-10 px-4 rounded-[var(--dash-card-radius)] border-[var(--dash-border)] font-semibold text-xs flex items-center gap-2 hover:bg-muted shadow-premium transition-all duration-[var(--dash-transition-fast)]"
             )}
           >
             <svg
@@ -164,7 +164,7 @@ export default function FilterBar({
               </span>
             )}
           </PopoverTrigger>
-          <PopoverContent className="w-72 p-4 rounded-2xl shadow-xl border-border/50" align="end" sideOffset={8}>
+          <PopoverContent className="w-72 p-4 rounded-[var(--dash-card-radius)] shadow-xl border-[var(--dash-border)]" align="end" sideOffset={8}>
             <div className="space-y-4">
               <div className="space-y-2">
                 <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Sort Mechanism</p>

@@ -107,7 +107,7 @@ export function DatePickerWithRange({
   <Button
     variant="ghost"
     size="sm"
-    className="h-9 text-[11px] font-bold text-[#cd1e22] hover:text-[#b01a1d] hover:bg-red-50 px-3 transition-colors w-full sm:w-auto"
+    className="h-9 text-[11px] font-bold text-primary hover:text-primary/90 hover:bg-primary/5 px-3 transition-colors w-full sm:w-auto"
     onClick={() => setInternalDate(undefined)}
   >
     Reset
@@ -115,7 +115,7 @@ export function DatePickerWithRange({
 
   <Button
     size="sm"
-    className="h-9 px-4 text-[11px] font-bold bg-[#cd1e22] hover:bg-[#b01a1d] text-white shadow-md active:scale-95 transition-all w-full sm:w-auto"
+    className="h-9 px-4 text-[11px] font-bold bg-primary hover:bg-primary/90 text-primary-foreground shadow-md active:scale-95 transition-all w-full sm:w-auto"
     onClick={() => {
       setDate(internalDate);
       setOpen(false);

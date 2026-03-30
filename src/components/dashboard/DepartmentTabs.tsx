@@ -38,9 +38,9 @@ export default function DepartmentTabs({
   const mounted = useMounted();
 
   return (
-    <div className="flex flex-col gap-4 w-full min-w-0 overflow-hidden">
+    <div className="flex flex-col gap-[var(--dash-gap)] w-full min-w-0 overflow-hidden">
       {/* Department Selector (Full width on mobile) */}
-      <div className="flex w-full sm:w-fit h-11 items-center gap-1 rounded-2xl bg-muted p-1 shadow-inner ring-1 ring-border/50 ml-1">
+      <div className="flex w-full sm:w-fit h-11 mt-1 items-center gap-1 rounded-[var(--dash-card-radius)] bg-muted p-1 shadow-inner border-[var(--dash-border)] ml-1">
         {DEPARTMENTS.map((dept) => {
           const isActive = activeDepartment === dept.value;
           return (
@@ -48,7 +48,7 @@ export default function DepartmentTabs({
               key={dept.value}
               onClick={() => onDepartmentChange(dept.value)}
               className={cn(
-                "relative flex h-full flex-1 sm:flex-initial items-center justify-center gap-2 rounded-xl px-4 transition-all duration-300",
+                "relative flex h-full flex-1 sm:flex-initial items-center justify-center gap-2 rounded-xl px-4 transition-all duration-[var(--dash-transition-fast)]",
                 isActive ? "text-primary z-10" : "text-muted-foreground hover:text-foreground"
               )}
             >
@@ -88,27 +88,27 @@ export default function DepartmentTabs({
                 key={tab.value}
                 onClick={() => onStatusChange(tab.value)}
                 className={cn(
-                  "relative flex flex-shrink-0 items-center gap-2 rounded-2xl px-4 py-2 border transition-all duration-300",
+                  "relative flex flex-shrink-0 items-center gap-2 rounded-[var(--dash-card-radius)] px-4 py-2 border transition-all duration-[var(--dash-transition-fast)]",
                   isActive
-                    ? "border-transparent z-10"
+                    ? "border-transparent z-10 "
                     : "bg-background border-border text-muted-foreground hover:border-border/80"
                 )}
               >
                 {isActive && (
                   <motion.div
                     layoutId="status-pill-bg"
-                    className={`absolute inset-0 rounded-2xl ${tab.activeBorderColor} shadow-sm`}
+                    className={`absolute inset-0 rounded-[var(--dash-card-radius)] ${tab.activeBorderColor} shadow-sm`}
                     transition={{ type: "spring", duration: 0.5, bounce: 0.15 }}
                   />
                 )}
                 <span className={cn("relative z-10 h-2 w-2 rounded-full", tab.dotColor)} />
-                <span className={cn("relative z-10 text-xs font-black transition-colors duration-300", isActive ? "text-foreground" : "text-muted-foreground")}>
+                <span className={cn("relative z-10 text-xs font-black transition-colors duration-300", isActive ? tab.activeText : "text-muted-foreground")}>
                   {tab.label}
                 </span>
                 {mounted && statusCounts && (
                   <span className={cn(
                     "relative z-10 flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1.5 text-[9px] font-black transition-colors duration-300",
-                    isActive ? "bg-background text-foreground shadow-xs" : "bg-muted text-muted-foreground"
+                    isActive ? `bg-muted shadow-xs ${tab.activeText}` : "bg-muted text-muted-foreground"
                   )}>
                     {statusCounts[tab.value]}
                   </span>

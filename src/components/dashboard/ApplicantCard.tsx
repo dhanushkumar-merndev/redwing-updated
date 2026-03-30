@@ -185,8 +185,8 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
       }}
     >
       <Card className={cn(
-        "applicant-card group relative rounded-2xl bg-card shadow-sm border border-border/50 transition-all duration-300 flex flex-col h-full overflow-hidden hover:shadow-md",
-        shouldShowDetails || isDesktop ? "p-2" : "p-0"
+        "applicant-card group relative rounded-[var(--dash-card-radius)] bg-card shadow-sm border-[var(--dash-border)] transition-all duration-[var(--dash-transition-fast)] flex flex-col h-full overflow-hidden hover:shadow-md",
+        shouldShowDetails || isDesktop ? "p-[var(--dash-card-padding)]" : "p-0"
       )}>
         
         <CardHeader 
@@ -271,8 +271,8 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
           }}
           className="overflow-hidden"
         >
-          <CardContent className="p-4 pt-0 flex-1 flex flex-col gap-4">
-            <div className="flex flex-col rounded-xl border border-border/20 divide-y divide-border/20 bg-muted/30 overflow-hidden shadow-sm">
+          <CardContent className="p-[var(--dash-card-padding)] pt-0 flex-1 flex flex-col gap-[var(--dash-gap)]">
+            <div className="flex flex-col rounded-xl border-[var(--dash-border)] divide-y divide-[var(--dash-border)] bg-muted/30 overflow-hidden shadow-sm">
               <div className="flex items-center justify-between p-2.5 hover:bg-background transition-colors">
                 <div className="flex items-center gap-2 min-w-0 pr-2">
                   <div className="p-1.5 bg-background rounded-full border border-border shrink-0 text-muted-foreground shadow-sm">
@@ -322,7 +322,7 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
               </div>
             </div>
 
-            <div className="space-y-3 p-3.5 rounded-2xl bg-muted/30 border border-border/50 shadow-inner">
+            <div className="space-y-3 p-[var(--dash-card-padding)] rounded-[var(--dash-card-radius)] bg-muted/30 border-[var(--dash-border)] shadow-inner">
               <Label className="text-[10px] uppercase font-black text-muted-foreground tracking-[0.1em] px-1 block">
                 Quick Decision
               </Label>

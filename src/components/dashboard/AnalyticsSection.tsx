@@ -41,6 +41,12 @@ import type { DateRange } from "react-day-picker";
 import type { AnalyticsEntry } from "@/app/api/analytics/route";
 import type { Applicant } from "@/types";
 import { ChartNoAxesCombined, BarChart3, FileSpreadsheet, Filter } from "lucide-react";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+
+interface PreparedEntry extends AnalyticsEntry {
+  _created: Date;
+  _completed: Date | null;
+}
 
 // ─── Constants & Config ──────────────────────────────────────────────────────
 
@@ -118,15 +124,20 @@ PillBarHorizontal.displayName = "PillBarHorizontal";
  * 📈 TrendChart: Isolated Trend rendering
  */
 const TrendChart = memo(({ data, type, activeKeys }: { data: AggregatedPoint[], type: "area" | "bar", activeKeys: (keyof typeof chartConfig)[] }) => {
+  const isMobile = useMediaQuery("(max-width: 640px)");
   if (data.length === 0) return <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No data in range</div>;
   
   return (
-    <ChartContainer config={chartConfig} className="h-full w-full px-2">
+    <ChartContainer config={chartConfig} className="h-full w-full px-0 sm:px-2">
       {type === "area" ? (
-        <AreaChart data={data} accessibilityLayer={false}>
+        <AreaChart 
+          data={data} 
+          margin={{ left: isMobile ? -5 : -15, right: 10, top: 10, bottom: 0 }} 
+          accessibilityLayer={false}
+        >
           <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
           <XAxis dataKey="date" className="text-[10px]" tickMargin={12} />
-          <YAxis className="text-[10px]" width={40} />
+          <YAxis className="text-[10px]" width={isMobile ? 30 : 40} />
           <ChartTooltip content={<ChartTooltipContent />} />
           {activeKeys.map((key) => (
             <Area
@@ -142,10 +153,15 @@ const TrendChart = memo(({ data, type, activeKeys }: { data: AggregatedPoint[], 
           ))}
         </AreaChart>
       ) : (
-        <BarChart data={data} margin={{ left: 15, right: 15, top: 10, bottom: 10 }} barSize={14} accessibilityLayer={false}>
+        <BarChart 
+          data={data} 
+          margin={{ left: isMobile ? 0 : -10, right: 10, top: 10, bottom: isMobile ? -5 : 10}} 
+          barSize={isMobile ? 12 : 14} 
+          accessibilityLayer={false}
+        >
           <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
           <XAxis dataKey="date" className="text-[10px]" tickMargin={8} />
-          <YAxis className="text-[10px]" width={35} />
+          <YAxis className="text-[10px]" width={isMobile ? 25 : 35} />
           <ChartTooltip content={<ChartTooltipContent />} />
           {activeKeys.map((key) => (
             <Bar
@@ -167,15 +183,16 @@ TrendChart.displayName = "TrendChart";
  * 📊 RoleBreakdownChart: Isolated Role rendering
  */
 const RoleBreakdownChart = memo(({ data }: { data: (Omit<AggregatedPoint, "date"> & { shortRole: string, fullName: string })[] }) => {
+  const isMobile = useMediaQuery("(max-width: 640px)");
   if (data.length === 0) return <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No data in range</div>;
 
   return (
-    <ChartContainer config={chartConfig} className="h-full w-full px-2">
+    <ChartContainer config={chartConfig} className="h-full w-full px-0 sm:px-2">
       <BarChart
         data={data}
         layout="vertical"
-        margin={{ left: 10, right: 25, top: 10, bottom: 10 }}
-        barSize={14}
+        margin={{ left: isMobile ? 0 : -20, right: 10, top: 10 ,bottom:-13}}
+        barSize={isMobile ? 12 : 14}
         accessibilityLayer={false}
       >
         <CartesianGrid strokeDasharray="3 3" horizontal={false} vertical={true} className="stroke-border/50" />
@@ -184,7 +201,7 @@ const RoleBreakdownChart = memo(({ data }: { data: (Omit<AggregatedPoint, "date"
           dataKey="shortRole"
           type="category"
           className="text-[9px] font-bold text-muted-foreground"
-          width={75}
+          width={isMobile ? 40 : 60}
           tickLine={false}
           axisLine={false}
           interval={0}
@@ -199,7 +216,7 @@ const RoleBreakdownChart = memo(({ data }: { data: (Omit<AggregatedPoint, "date"
             dataKey={key}
             fill={chartConfig[key].color}
             stackId="a"
-            animationDuration={600}
+            animationDuration={400}
             shape={(p: PillBarProps) => (
               <PillBarHorizontal
                 {...p}
@@ -226,14 +243,19 @@ interface WorkflowPoint {
 }
 
 const WorkflowEfficiencyChart = memo(({ data, mode, tooltip: WorkflowTooltip }: { data: WorkflowPoint[], mode: string, tooltip: React.ComponentType<{ active?: boolean, payload?: { dataKey: string, value: number, name: string, color: string }[] }> }) => {
+  const isMobile = useMediaQuery("(max-width: 640px)");
   if (data.length === 0) return <div className="flex h-full items-center justify-center text-xs text-muted-foreground">Calculating metrics...</div>;
 
   return (
-    <ChartContainer config={chartConfig} className="h-full w-full px-2">
-      <AreaChart data={data} margin={{ left: 10, right: 10, top: 10, bottom: 0 }} accessibilityLayer={false}>
+    <ChartContainer config={chartConfig} className="h-full w-full px-0 sm:px-2">
+      <AreaChart 
+        data={data} 
+        margin={{ left: isMobile ? 10 : 0, right: 10, top: 10, bottom: -10 }} 
+        accessibilityLayer={false}
+      >
         <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border/50" />
         <XAxis dataKey="date" className="text-[10px]" />
-        <YAxis className="text-[10px]" width={35} />
+        <YAxis className="text-[10px]" width={isMobile ? 25 : 35} />
         <ChartTooltip content={<WorkflowTooltip />} />
         
         <Area
@@ -278,7 +300,15 @@ WorkflowEfficiencyChart.displayName = "WorkflowEfficiencyChart";
 
 const analyticsVariants: Variants = {
   hidden:  { opacity: 0, y: 10 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut", delay: 0.1 } },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    transition: { 
+      duration: 0.4, 
+      ease: "easeOut", 
+      delay: 0.1 
+    } 
+  },
 };
 
 interface AnalyticsSectionProps {
@@ -287,7 +317,7 @@ interface AnalyticsSectionProps {
 }
 
 const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: AnalyticsSectionProps) {
-  const [entries, setEntries]               = useState<AnalyticsEntry[]>([]);
+  const [entries, setEntries]               = useState<PreparedEntry[]>([]);
   const deferredEntries                     = useDeferredValue(entries);
   
   const [earliestDate, setEarliestDate]     = useState<Date | undefined>(undefined);
@@ -320,18 +350,23 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
         }
         const data = (await res.json()) as { entries: AnalyticsEntry[] };
         const fetched = data.entries ?? [];
-        setEntries(fetched);
         
         if (fetched.length > 0) {
-          const earliest = fetched.reduce<Date>((min, e) => {
-            const d = toLocalDate(e.createdDate);
-            return d < min ? d : min;
-          }, toLocalDate(fetched[0].createdDate));
+          // Pre-parse dates to avoid expensive repeated parseISO/new Date calls in useMemo
+          const prepared: PreparedEntry[] = fetched.map(e => ({
+            ...e,
+            _created: toLocalDate(e.createdDate),
+            _completed: e.completedDate ? toLocalDate(e.completedDate) : null
+          }));
+          setEntries(prepared);
 
-          const latest = fetched.reduce<Date>((max, e) => {
-            const d = toLocalDate(e.createdDate);
-            return d > max ? d : max;
-          }, toLocalDate(fetched[0].createdDate));
+          const earliest = prepared.reduce<Date>((min, e) => {
+            return e._created < min ? e._created : min;
+          }, prepared[0]._created);
+
+          const latest = prepared.reduce<Date>((max, e) => {
+            return e._created > max ? e._created : max;
+          }, prepared[0]._created);
 
           setEarliestDate(earliest);
           setTrendDateRange((prev) => prev ?? { from: earliest, to: latest });
@@ -355,14 +390,14 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
       map.set(format(day, "dd MMM"), { date: format(day, "dd MMM"), pending: 0, interested: 0, inprocess: 0, rejected: 0 });
     });
 
-    deferredEntries.forEach((e) => {
-      const dateStr = (e.status !== "pending" && e.completedDate) ? e.completedDate : e.createdDate;
-      const d = parseISO(dateStr);
-      if (isWithinInterval(d, { start: from, end: to })) {
+    (deferredEntries as unknown as PreparedEntry[]).forEach((e) => {
+      const d = (e.status !== "pending" && e._completed) ? e._completed : e._created;
+      if (d >= from && d <= to) {
         const key = format(d, "dd MMM");
         const point = map.get(key);
         if (point && isStatus(e.status)) {
-          point[e.status]++;
+          const statusKey = e.status as keyof Omit<AggregatedPoint, "date">;
+          point[statusKey] = (Number(point[statusKey]) || 0) + 1;
         }
       }
     });
@@ -384,13 +419,14 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
     const to   = endOfDay(roleDateRange.to || roleDateRange.from);
     const map  = new Map<string, Omit<AggregatedPoint, "date">>();
 
-    deferredEntries.forEach((e) => {
-      const d = parseISO(e.createdDate);
-      if (isWithinInterval(d, { start: from, end: to })) {
+    (deferredEntries as unknown as PreparedEntry[]).forEach((e) => {
+      const d = e._created;
+      if (d >= from && d <= to) {
         if (!map.has(e.role)) map.set(e.role, { pending: 0, interested: 0, inprocess: 0, rejected: 0 });
         const counts = map.get(e.role)!;
         if (isStatus(e.status)) {
-          counts[e.status]++;
+          const statusKey = e.status as keyof Omit<AggregatedPoint, "date">;
+          counts[statusKey] = (Number(counts[statusKey]) || 0) + 1;
         }
       }
     });
@@ -406,6 +442,17 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
     const to   = endOfDay(workflowDateRange.to || workflowDateRange.from);
     const dateList = eachDayOfInterval({ start: from, end: to }).map(d => format(d, "yyyy-MM-dd"));
 
+    // 🚀 Performance Optimization: Pre-calculate counts in O(N) using Frequency Maps
+    const createdCountMap = new Map<string, number>();
+    const completedCountMap = new Map<string, number>();
+
+    deferredEntries.forEach(e => {
+      createdCountMap.set(e.createdDate, (createdCountMap.get(e.createdDate) || 0) + 1);
+      if (e.completedDate) {
+        completedCountMap.set(e.completedDate, (completedCountMap.get(e.completedDate) || 0) + 1);
+      }
+    });
+
     let cCreated = 0, cCompleted = 0;
     if (workflowMode === "carry") {
       deferredEntries.forEach(e => {
@@ -416,13 +463,25 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
 
     return dateList.map(str => {
       const d = toLocalDate(str);
-      const createdToday = deferredEntries.filter(e => e.createdDate === str).length;
-      const completedToday = deferredEntries.filter(e => e.completedDate === str).length;
+      const createdToday = createdCountMap.get(str) || 0;
+      const completedToday = completedCountMap.get(str) || 0;
+
       if (workflowMode === "carry") {
-        cCreated += createdToday; cCompleted += completedToday;
-        return { date: format(d, "dd MMM"), backlog: Math.max(0, cCreated - cCompleted), completed: completedToday, newLeads: createdToday };
+        cCreated += createdToday; 
+        cCompleted += completedToday;
+        return { 
+          date: format(d, "dd MMM"), 
+          backlog: Math.max(0, cCreated - cCompleted), 
+          completed: completedToday, 
+          newLeads: createdToday 
+        };
       }
-      return { date: format(d, "dd MMM"), backlog: createdToday, completed: completedToday, newLeads: createdToday };
+      return { 
+        date: format(d, "dd MMM"), 
+        backlog: createdToday, 
+        completed: completedToday, 
+        newLeads: createdToday 
+      };
     });
   }, [deferredEntries, workflowDateRange, workflowMode, toLocalDate]);
 
@@ -469,7 +528,7 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
       animate="visible"
     >
       {/* 📈 Trends Chart */}
-      <Card className="rounded-2xl bg-card shadow-sm border-border/10 hover:shadow-md transition-all duration-300 min-h-[360px]">
+      <Card className="rounded-[var(--dash-card-radius)] bg-card border-[var(--dash-border)] shadow-sm hover:shadow-md transition-all duration-[var(--dash-transition-slow)] min-h-[360px]">
         <CardHeader className="py-4 px-6 space-y-4">
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
@@ -484,7 +543,7 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
               <Button
                 variant={chartType === "area" ? "secondary" : "ghost"}
                 size="sm"
-                className="h-7 text-[10px] px-3 font-bold rounded-lg shadow-sm"
+                className={`h-7 text-[10px] px-3 font-bold rounded-lg  ${chartType === "area" ? "border-1 border-primary/20" : ""}`}
                 onClick={() => setChartType("area")}
               >
                 Line
@@ -492,7 +551,7 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
               <Button
                 variant={chartType === "bar" ? "secondary" : "ghost"}
                 size="sm"
-                className="h-7 text-[10px] px-3 font-bold rounded-lg shadow-sm"
+                className={`h-7 text-[10px] px-3 font-bold rounded-lg  ${chartType === "bar" ? "border-1 border-primary/20" : ""}`}
                 onClick={() => setChartType("bar")}
               >
                 Bar
@@ -512,11 +571,11 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
               >
                 <FileSpreadsheet className="w-4 h-4" />
               </DialogTrigger>
-              <DialogContent className="sm:max-w-md rounded-[2rem] p-8 border-primary/20">
+              <DialogContent className="sm:max-w-md rounded-[2rem] border-primary/20">
                 <DialogHeader>
-                  <DialogTitle className="text-2xl font-black italic text-primary">EXPORT PERFORMANCE</DialogTitle>
+                  <DialogTitle className="text-xl mt-2 font-black italic text-primary text-center">EXPORT PERFORMANCE</DialogTitle>
                 </DialogHeader>
-                <div className="py-2 space-y-6">
+                <div className="p-2 space-y-6">
                   <p className="text-sm text-muted-foreground font-medium">Export raw candidate data for external auditing.</p>
                   <DatePickerWithRange date={csvDateRange} setDate={setCSVDateRange} minDate={earliestDate} />
                 </div>
@@ -556,7 +615,7 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
       </Card>
 
       {/* 📊 Role Breakdown Chart */}
-      <Card className="rounded-2xl bg-card shadow-sm border border-border/50 hover:shadow-md transition-all duration-300 min-h-[360px]">
+      <Card className="rounded-[var(--dash-card-radius)] bg-card border-[var(--dash-border)] shadow-sm hover:shadow-md transition-all duration-[var(--dash-transition-slow)] min-h-[360px]">
         <CardHeader className="py-4 px-6 space-y-4">
           <div className="flex items-center justify-between">
             <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
@@ -571,21 +630,23 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
       </Card>
 
       {/* ⚡ Workflow Efficiency */}
-      <Card className="md:col-span-2 rounded-2xl bg-card shadow-sm border border-border/50 hover:shadow-md transition-all duration-300">
+      <Card className="md:col-span-2 rounded-[var(--dash-card-radius)] bg-card border-[var(--dash-border)] shadow-sm hover:shadow-md transition-all duration-[var(--dash-transition-slow)]">
         <CardHeader className="py-4 px-6 space-y-4">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <CardTitle className="text-xs font-bold text-muted-foreground">Workflow Efficiency & Lag Response</CardTitle>
               <p className="text-[10px] text-muted-foreground/80 leading-relaxed max-w-sm">
                 {workflowMode === "carry" ? "Total cumulative backlog vs. daily closures." : "Daily unique velocity of leads and closures."}
               </p>
             </div>
-            <div className="flex items-center gap-3 ml-auto">
-              <DatePickerWithRange date={workflowDateRange} setDate={setWorkflowDateRange} minDate={earliestDate} />
-              <Tabs value={workflowMode} onValueChange={(v) => startTransition(() => setWorkflowMode(v as "carry" | "unique"))} className="h-8 p-1 bg-muted/30 rounded-xl border border-border/40">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 sm:ml-auto w-full sm:w-auto">
+              <div className="flex-1 sm:flex-none min-w-[140px]">
+                <DatePickerWithRange date={workflowDateRange} setDate={setWorkflowDateRange} minDate={earliestDate} />
+              </div>
+              <Tabs value={workflowMode} onValueChange={(v) => startTransition(() => setWorkflowMode(v as "carry" | "unique"))} className="h-9 p-1 bg-muted/30 rounded-xl border border-border/40 shrink-0">
                 <TabsList className="h-full bg-transparent p-0 gap-1">
-                  <TabsTrigger value="carry" className="h-full text-[9px] font-black uppercase px-4 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">CARRY</TabsTrigger>
-                  <TabsTrigger value="unique" className="h-full text-[9px] font-black uppercase px-4 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">DAILY</TabsTrigger>
+                  <TabsTrigger value="carry" className="h-full text-[9px] font-black uppercase px-2.5 sm:px-4 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">CARRY</TabsTrigger>
+                  <TabsTrigger value="unique" className="h-full text-[9px] font-black uppercase px-2.5 sm:px-4 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground transition-all">DAILY</TabsTrigger>
                 </TabsList>
               </Tabs>
             </div>
