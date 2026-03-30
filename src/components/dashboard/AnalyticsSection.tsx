@@ -40,7 +40,7 @@ import { format, isWithinInterval, startOfDay, endOfDay, parseISO, eachDayOfInte
 import type { DateRange } from "react-day-picker";
 import type { AnalyticsEntry } from "@/app/api/analytics/route";
 import type { Applicant } from "@/types";
-import { ChartNoAxesCombined, BarChart3, FileSpreadsheet, Filter } from "lucide-react";
+import { ChartNoAxesCombined, BarChart3, FileSpreadsheet, Filter, Download } from "lucide-react";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface PreparedEntry extends AnalyticsEntry {
@@ -569,7 +569,7 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
                   />
                 }
               >
-                <FileSpreadsheet className="w-4 h-4" />
+                <Download className="w-4 h-4" />
               </DialogTrigger>
               <DialogContent className="sm:max-w-md rounded-[2rem] border-primary/20">
                 <DialogHeader>
