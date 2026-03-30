@@ -70,7 +70,7 @@
   --dash-chart-opacity: 0.12;
 
   /* 🏗️ Layout Tokens */
-  --dash-container-padding: 1.5rem;
+  --dash-container-padding: 0.5rem;
   --dash-section-gap: 2rem;
 }
 
