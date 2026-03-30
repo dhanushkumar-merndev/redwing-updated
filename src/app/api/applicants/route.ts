@@ -26,13 +26,7 @@ export async function GET(req: NextRequest) {
     const rows = response.data.values ?? [];
     // Skip header row (index 0), filter out broken rows
     const applicants = rows.slice(1)
-      .map((row, index) => {
-        try {
-          return mapRow(row, index);
-        } catch {
-          return null;
-        }
-      })
+      .map((row, index) => mapRow(row, index))
       .filter((a): a is Applicant => a !== null);
 
     setCache("applicants", applicants);

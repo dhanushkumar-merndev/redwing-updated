@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useDeferredValue } from "react";
 import { AnimatePresence, LayoutGroup, motion, type Variants } from "framer-motion";
 import Header from "@/components/dashboard/Header";
 import StatsRow from "@/components/dashboard/StatsRow";
@@ -125,14 +125,17 @@ export default function DashboardPage() {
     return s;
   }, [applicants, activeDepartment]);
 
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const deferredSelectedRole = useDeferredValue(selectedRole);
+
   const filteredApplicants = useMemo(() => {
     return applicants
       .filter((a) => {
         if (getDepartment(a.position) !== activeDepartment) return false;
         if (activeStatus !== "all" && a.status !== activeStatus) return false;
-        if (selectedRole !== "all" && a.position !== selectedRole) return false;
-        if (searchQuery) {
-          const q = searchQuery.toLowerCase();
+        if (deferredSelectedRole !== "all" && a.position !== deferredSelectedRole) return false;
+        if (deferredSearchQuery) {
+          const q = deferredSearchQuery.toLowerCase();
           return (
             a.full_name.toLowerCase().includes(q) ||
             a.email.toLowerCase().includes(q) ||
@@ -168,7 +171,7 @@ export default function DashboardPage() {
         if (valA > valB) return sortOrder === "asc" ? 1 : -1;
         return 0;
       });
-  }, [applicants, activeDepartment, activeStatus, searchQuery, selectedRole, sortField, sortOrder]);
+  }, [applicants, activeDepartment, activeStatus, deferredSearchQuery, deferredSelectedRole, sortField, sortOrder]);
 
   const departmentTabsProps = {
     activeDepartment,
@@ -392,7 +395,7 @@ export default function DashboardPage() {
         lastUpdated={lastUpdated}
       />
 
-      <main className="mx-auto w-full max-w-7xl px-[var(--dash-container-padding)] py-[var(--dash-container-padding)] space-y-[var(--dash-gap)] md:space-y-[var(--dash-section-gap)]">
+      <main className="mx-auto md:mt-4 w-full max-w-7xl px-[var(--dash-container-padding)] py-[var(--dash-container-padding)] space-y-[var(--dash-gap)] md:space-y-[var(--dash-section-gap)]">
         {mounted && isDesktop && WelcomeHeader}
 
         {mounted ? (

@@ -37,6 +37,14 @@ import {
 import { cn } from "@/lib/utils";
 import type { Applicant, ApplicantStatus } from "@/types";
 import { scrollToPosition } from "@/lib/lenis";
+import { isValid } from "date-fns";
+
+const safeFormat = (dateStr: string | undefined, fmt: string, fallback = "—"): string => {
+  if (!dateStr) return fallback;
+  const d = new Date(dateStr.includes("|") ? dateStr.split("|")[0] : dateStr);
+  if (!isValid(d)) return fallback;
+  return format(d, fmt);
+};
 
 
 interface ApplicantCardProps {
@@ -313,11 +321,11 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
                     <Calendar className="w-3 h-3" />
                   </div>
                   <span className="text-[12px] font-bold text-muted-foreground truncate">
-                    Applied {applicant.created_time ? format(new Date(applicant.created_time), "dd MMM yyyy") : "—"}
+                    Applied {safeFormat(applicant.created_time, "dd MMM yyyy")}
                   </span>
                 </div>
                 <div className="h-8 px-4 flex items-center justify-center text-[11px] font-black bg-background/80 text-muted-foreground shrink-0 rounded-full border border-border shadow-sm">
-                  {applicant.created_time ? format(new Date(applicant.created_time), "hh:mm a") : "--:--"}
+                  {safeFormat(applicant.created_time, "hh:mm a", "--:--")}
                 </div>
               </div>
             </div>
@@ -390,7 +398,7 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
                   <div className="flex items-center gap-1 text-[11px] text-muted-foreground font-black">
                     <Clock className="w-3 h-3" />
                     {applicant.updated.length > 0
-                      ? format(new Date(applicant.updated[applicant.updated.length - 1].split("|")[0]), "dd MMM yyyy")
+                      ? safeFormat(applicant.updated[applicant.updated.length - 1], "dd MMM yyyy")
                       : "New Lead"}
                   </div>
                   {applicant.updated.length > 0 && applicant.updated[applicant.updated.length - 1].includes("|") && (
@@ -425,7 +433,7 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
                             <div className="flex flex-col gap-0.5">
                               <div className="flex items-center justify-between">
                                 <span className="text-xs font-black text-foreground">
-                                  {format(new Date(dateString.split("|")[0]), "dd MMMM yyyy")}
+                                  {safeFormat(dateString, "dd MMMM yyyy")}
                                 </span>
                                 {dateString.includes("|") && (
                                   <Badge variant="secondary" className="h-4 text-[8px] px-1.5 font-black bg-muted/80 text-primary border-none">
@@ -434,7 +442,7 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
                                 )}
                               </div>
                               <span className="text-[10px] font-bold text-muted-foreground">
-                                {format(new Date(dateString.split("|")[0]), "hh:mm a")}
+                                {safeFormat(dateString, "hh:mm a")}
                               </span>
                             </div>
                           </div>

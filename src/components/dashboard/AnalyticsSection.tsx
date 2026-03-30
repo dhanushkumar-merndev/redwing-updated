@@ -40,7 +40,7 @@ import { format, isWithinInterval, startOfDay, endOfDay, parseISO, eachDayOfInte
 import type { DateRange } from "react-day-picker";
 import type { AnalyticsEntry } from "@/app/api/analytics/route";
 import type { Applicant } from "@/types";
-import { ChartNoAxesCombined, BarChart3, FileSpreadsheet, Filter, Download } from "lucide-react";
+import { ChartNoAxesCombined, BarChart3, Filter, Download } from "lucide-react";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 interface PreparedEntry extends AnalyticsEntry {
@@ -413,15 +413,17 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
     }));
   }, [deferredEntries, trendDateRange, statusFilter]);
 
-  const roleData = useMemo(() => {
-    if (!deferredEntries.length || !roleDateRange?.from) return [];
+  const roleDataCalculated = useMemo(() => {
+    if (!deferredEntries.length || !roleDateRange?.from) return { data: [], total: 0 };
     const from = startOfDay(roleDateRange.from);
     const to   = endOfDay(roleDateRange.to || roleDateRange.from);
     const map  = new Map<string, Omit<AggregatedPoint, "date">>();
+    let total = 0;
 
     (deferredEntries as unknown as PreparedEntry[]).forEach((e) => {
       const d = e._created;
       if (d >= from && d <= to) {
+        total++;
         if (!map.has(e.role)) map.set(e.role, { pending: 0, interested: 0, inprocess: 0, rejected: 0 });
         const counts = map.get(e.role)!;
         if (isStatus(e.status)) {
@@ -431,10 +433,15 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
       }
     });
 
-    return Array.from(map.entries()).map(([role, counts]) => ({
+    const data = Array.from(map.entries()).map(([role, counts]) => ({
       role, ...counts, shortRole: ROLE_SHORT_NAMES[role.trim()] || role, fullName: role
     }));
+
+    return { data, total };
   }, [deferredEntries, roleDateRange]);
+
+  const roleData = roleDataCalculated.data;
+  const roleTotal = roleDataCalculated.total;
 
   const workflowData = useMemo(() => {
     if (!deferredEntries.length || !workflowDateRange?.from) return [];
@@ -456,13 +463,14 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
     let cCreated = 0, cCompleted = 0;
     if (workflowMode === "carry") {
       deferredEntries.forEach(e => {
-        if (toLocalDate(e.createdDate) < from) cCreated++;
-        if (e.completedDate && toLocalDate(e.completedDate) < from) cCompleted++;
+        // Use pre-parsed _created instead of toLocalDate()
+        if (e._created < from) cCreated++;
+        if (e._completed && e._completed < from) cCompleted++;
       });
     }
 
     return dateList.map(str => {
-      const d = toLocalDate(str);
+      const d = toLocalDate(str); // str is from dateList which is yyyy-MM-dd
       const createdToday = createdCountMap.get(str) || 0;
       const completedToday = completedCountMap.get(str) || 0;
 
@@ -620,6 +628,11 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
           <div className="flex items-center justify-between">
             <CardTitle className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-1.5">
               <BarChart3 className="w-3 h-3" /> Role Breakdown
+              {roleTotal > 0 && (
+                <span className="ml-1.5 text-[10px] font-black text-black px-1.5 py-0.5 bg-muted rounded-md">
+                  {roleTotal} RECORDS
+                </span>
+              )}
             </CardTitle>
             <DatePickerWithRange date={roleDateRange} setDate={setRoleDateRange} minDate={earliestDate} />
           </div>
