@@ -50,7 +50,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-const MOBILE_ITEMS_PER_PAGE = 10;
+const MOBILE_ITEMS_PER_PAGE = 15;
 const DESKTOP_DEFAULT_PAGE_SIZE = 18; // Keep 18 as default, then user can select 25, 50, 100
 
 
@@ -324,7 +324,7 @@ export default function DashboardPage() {
   }, [userName, quoteIndex, quotes]);
 
   const DashboardContent = (
-    <div className="space-y-3">
+    <div className="space-y-3 mt-2">
       <StatsRow stats={stats} />
       <AnalyticsSection applicants={applicants} on404={handle404} />
       {mounted && !isDesktop && (
@@ -334,7 +334,7 @@ export default function DashboardPage() {
             setTimeout(() => resizeLenis(), 50);
             setTimeout(() => scrollToPosition(0), 100);
           }}
-          className="w-full h-10 bg-primary text-primary-foreground rounded-2xl font-bold shadow-xl active:scale-95 transition-all text-sm flex items-center justify-center gap-2 group mb-6"
+          className="w-full h-12 bg-primary text-primary-foreground rounded-2xl font-bold shadow-xl active:scale-95 transition-all text-sm flex items-center justify-center gap-2 group mb-6"
         >
           View Applicant Database
           <svg className="h-4 w-4 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -348,7 +348,7 @@ export default function DashboardPage() {
   const ApplicantsListContent = (
     <div className="space-y-4 md:space-y-6">
       {mounted && !isDesktop && (
-        <div className="flex items-center gap-3 mb-2">
+        <div className="flex items-center gap-3 mt-2">
           <Button
             variant="ghost"
             size="sm"
@@ -543,7 +543,7 @@ export default function DashboardPage() {
                   <div className="flex justify-end pr-1">
                     <div className="flex flex-col items-end gap-0.5">
                       <span className="text-[11px] font-black text-foreground">
-                        {Math.min((currentPage - 1) * pageSize + 1, filteredApplicants.length)} - {Math.min(currentPage * pageSize, filteredApplicants.length)} / {filteredApplicants.length}
+                        {Math.min((currentPage - 1) * effectivePageSize + 1, filteredApplicants.length)}-{Math.min(currentPage * effectivePageSize, filteredApplicants.length)} out of {filteredApplicants.length}
                       </span>
                       <span className="text-[9px] font-black text-muted-foreground/50 uppercase tracking-widest">
                         Applicants
@@ -553,11 +553,11 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Mobile Layout: Row Wise [Count top | Pagination below] */}
-                <div className="md:hidden flex flex-col items-center w-full">
+                <div className="md:hidden flex flex-col items-center gap-2 w-full">
                   {/* Showing Count (Mobile) */}
                   <div className="flex flex-col items-center">
                     <span className="text-[10px] uppercase font-black tracking-[0.1em] text-muted-foreground">
-                      Showing {paginatedApplicants.length} of {filteredApplicants.length}
+                      Showing {Math.min((currentPage - 1) * effectivePageSize + 1, filteredApplicants.length)}-{Math.min(currentPage * effectivePageSize, filteredApplicants.length)} out of {filteredApplicants.length}
                     </span>
                   </div>
 
@@ -595,7 +595,7 @@ export default function DashboardPage() {
                                 isActive={currentPage === pageNum}
                                 onClick={() => handlePageChange(pageNum)}
                                 className={cn(
-                                  "cursor-pointer mt-2 h-9 w-9 rounded-full text-[11px] font-black transition-all",
+                                  "cursor-pointer  h-9 w-9 rounded-full text-[11px] font-black transition-all",
                                   currentPage === pageNum 
                                     ? "bg-primary! text-white shadow-lg shadow-primary/20" 
                                     : "bg-background border border-border text-muted-foreground"
