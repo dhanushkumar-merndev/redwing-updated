@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useDeferredValue } from "react";
 import { AnimatePresence, LayoutGroup, motion, type Variants } from "framer-motion";
+import { cn } from "@/lib/utils";
 import Header from "@/components/dashboard/Header";
 import StatsRow from "@/components/dashboard/StatsRow";
 import AnalyticsSection from "@/components/dashboard/AnalyticsSection";
@@ -22,7 +23,35 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { getFromDB } from "@/lib/db";
 import { decryptName } from "@/lib/crypto";
 
-const ITEMS_PER_PAGE = 9;
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+const MOBILE_ITEMS_PER_PAGE = 10;
+const DESKTOP_DEFAULT_PAGE_SIZE = 18; // Keep 18 as default, then user can select 25, 50, 100
 
 
 const fadeUp = (delay = 0): Variants => ({
@@ -30,7 +59,11 @@ const fadeUp = (delay = 0): Variants => ({
   visible: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, ease: [0.22, 1, 0.36, 1] as const, delay },
+    transition: { 
+      duration: 0.4, // Slightly faster
+      ease: [0.22, 1, 0.36, 1] as const, 
+      delay: delay * 0.5 // Reduce delay factor for snappier feel
+    },
   },
 });
 
@@ -45,7 +78,11 @@ export default function DashboardPage() {
   const [selectedRole, setSelectedRole] = useState<Role | "all">("all");
   const [sortField, setSortField] = useState<SortField>("created_time");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
-  const [displayLimit, setDisplayLimit] = useState(ITEMS_PER_PAGE);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(DESKTOP_DEFAULT_PAGE_SIZE);
+  const [showAllWarning, setShowAllWarning] = useState(false);
+  const [pendingPageSize, setPendingPageSize] = useState<number>(DESKTOP_DEFAULT_PAGE_SIZE);
+
   const [activeMobileView, setActiveMobileView] = useState<"dashboard" | "applicants">("dashboard");
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
   
@@ -85,14 +122,16 @@ export default function DashboardPage() {
     fetchApplicants(() => setLastUpdated(new Date()));
   }, [fetchApplicants]);
 
+  const effectivePageSize = mounted && isDesktop ? pageSize : MOBILE_ITEMS_PER_PAGE;
+
   useEffect(() => {
     const timer = setTimeout(() => resizeLenis(), 100);
     return () => clearTimeout(timer);
-  }, [applicants, displayLimit, activeDepartment, activeStatus]);
+  }, [applicants, effectivePageSize, currentPage, activeDepartment, activeStatus]);
 
   const handleFilterChange = useCallback((updater: () => void) => {
     updater();
-    setDisplayLimit(ITEMS_PER_PAGE);
+    setCurrentPage(1);
   }, []);
 
   const stats = useMemo(() => {
@@ -173,6 +212,54 @@ export default function DashboardPage() {
       });
   }, [applicants, activeDepartment, activeStatus, deferredSearchQuery, deferredSelectedRole, sortField, sortOrder]);
 
+  const { paginatedApplicants, totalPages } = useMemo(() => {
+    const total = filteredApplicants.length;
+    const pages = Math.ceil(total / effectivePageSize);
+    const start = (currentPage - 1) * effectivePageSize;
+    const end = start + effectivePageSize;
+    return {
+      paginatedApplicants: filteredApplicants.slice(start, end),
+      totalPages: pages,
+    };
+  }, [filteredApplicants, currentPage, effectivePageSize]);
+
+  const handlePageSizeChange = (val: string | null) => {
+    if (!val) return;
+    const size = parseInt(val);
+    if (size === 72 || size === 90) {
+      setPendingPageSize(size);
+      setShowAllWarning(true);
+    } else {
+      setPageSize(size);
+      setCurrentPage(1);
+    }
+  };
+
+  const confirmShowAll = () => {
+    setPageSize(pendingPageSize);
+    setCurrentPage(1);
+    setShowAllWarning(false);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    
+    // On mobile, always scroll to the very top of the list view (y=0) 
+    // Since the list and dashboard are separated views on mobile.
+    if (!isDesktop) {
+      scrollToPosition(0);
+      return;
+    }
+
+    // Scroll to filters/tabs section on desktop (keeping stats/analytics visible at the top)
+    const element = document.getElementById("applicants-list-anchor");
+    if (element) {
+      const rect = element.getBoundingClientRect();
+      const offset = 100; // Slightly more offset to see the tabs clearly
+      scrollToPosition(window.scrollY + rect.top - offset);
+    }
+  };
+
   const departmentTabsProps = {
     activeDepartment,
     activeStatus,
@@ -186,6 +273,12 @@ export default function DashboardPage() {
   };
 
 
+
+  const [prevIsDesktop, setPrevIsDesktop] = useState(isDesktop);
+  if (isDesktop !== prevIsDesktop) {
+    setPrevIsDesktop(isDesktop);
+    setCurrentPage(1);
+  }
 
   const WelcomeHeader = useMemo(() => {
     const hour = new Date().getHours();
@@ -272,10 +365,11 @@ export default function DashboardPage() {
         </div>
       )}
 
+      <div id="applicants-list-anchor" className="scroll-mt-24" />
       <motion.div 
         key="filters" 
         className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 md:gap-3" 
-        variants={fadeUp(0.3)} 
+        variants={fadeUp(0.05)} 
         initial="hidden" 
         animate="visible"
       >
@@ -346,7 +440,7 @@ export default function DashboardPage() {
               <LayoutGroup>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 md:gap-4 p-1">
                   <AnimatePresence mode="popLayout" initial={false}>
-                    {filteredApplicants.slice(0, displayLimit).map((applicant, i) => (
+                    {paginatedApplicants.map((applicant, i) => (
                       <ApplicantCard 
                         key={applicant.id} 
                         applicant={applicant} 
@@ -360,28 +454,201 @@ export default function DashboardPage() {
                   </AnimatePresence>
                 </div>
               </LayoutGroup>
-              {filteredApplicants.length > displayLimit && (
-                <div className="flex items-center justify-center gap-3 pt-6 flex-col sm:flex-row">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setDisplayLimit(prev => prev + ITEMS_PER_PAGE)} 
-                    className="w-full sm:w-auto font-bold text-xs px-8 rounded-full h-10 transition-all bg-secondary! hover:text-secondary-foreground! cursor-pointer"
-                  >
-                    Load More ({filteredApplicants.length - displayLimit} left)
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    onClick={() => setDisplayLimit(filteredApplicants.length)} 
-                    className="w-full sm:w-auto font-bold text-xs px-8 rounded-full h-10 transition-all bg-primary! text-primary-foreground! cursor-pointer hover:bg-primary/80!"
-                  >
-                    View All Applicants
-                  </Button>
+
+              {/* Pagination and Rows Per Page */}
+              <div className="flex flex-col gap-6 py-8 border-t border-border mt-8">
+                {/* Desktop Layout: 3 Columns [Rows per Page (Left) | Pagination (Center) | Count (Right)] */}
+                <div className="hidden md:grid md:grid-cols-[200px_1fr_200px] md:items-center w-full">
+                  {/* Left: Rows Per Page */}
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">
+                      Rows per page
+                    </span>
+                    <Select value={pageSize.toString()} onValueChange={handlePageSizeChange}>
+                      <SelectTrigger className="h-9 w-[70px] rounded-full text-[11px] font-black bg-secondary border-none shadow-sm hover:bg-secondary/80 transition-colors">
+                        <SelectValue placeholder={pageSize.toString()} />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl border-border shadow-2xl">
+                        {[18, 36, 54, 72, 90].map((v) => (
+                          <SelectItem key={v} value={v.toString()} className="text-[11px] font-black py-2 cursor-pointer focus:bg-primary/10">
+                            {v}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Center: Pagination */}
+                  <div className="flex justify-center">
+                    {totalPages > 1 && (
+                      <Pagination>
+                        <PaginationContent className="gap-1">
+                          <PaginationItem>
+                            <PaginationPrevious 
+                              onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                              className={cn(
+                                "cursor-pointer h-9 px-4 rounded-lg text-[10px] font-black uppercase tracking-widest border-border bg-background hover:bg-muted active:scale-95 transition-all",
+                                currentPage === 1 && "pointer-events-none opacity-30"
+                              )}
+                            />
+                          </PaginationItem>
+                          
+                          {[...Array(totalPages)].map((_, i) => {
+                            const pageNum = i + 1;
+                            if (totalPages > 5) {
+                              if (pageNum !== 1 && pageNum !== totalPages && Math.abs(pageNum - currentPage) > 1) {
+                                if (pageNum === 2 || pageNum === totalPages - 1) {
+                                  return (
+                                    <PaginationItem key={pageNum}>
+                                      <PaginationEllipsis className="h-9 w-9 text-muted-foreground/40" />
+                                    </PaginationItem>
+                                  );
+                                }
+                                return null;
+                              }
+                            }
+                            return (
+                              <PaginationItem key={pageNum}>
+                                <PaginationLink 
+                                  isActive={currentPage === pageNum}
+                                  onClick={() => handlePageChange(pageNum)}
+                                  className={cn(
+                                    "cursor-pointer h-9 w-9 rounded-lg text-[11px] font-black transition-all active:scale-95",
+                                    currentPage === pageNum 
+                                      ? "bg-primary! text-white! shadow-md shadow-primary/20 hover:bg-primary/90!" 
+                                      : "bg-background border border-border text-muted-foreground hover:bg-muted"
+                                  )}
+                                >
+                                  {pageNum}
+                                </PaginationLink>
+                              </PaginationItem>
+                            );
+                          })}
+
+                          <PaginationItem>
+                            <PaginationNext 
+                              onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                              className={cn(
+                                "cursor-pointer h-9 px-4 rounded-lg text-[10px] font-black uppercase tracking-widest border-border bg-background hover:bg-muted active:scale-95 transition-all text-xs font-black",
+                                currentPage === totalPages && "pointer-events-none opacity-30"
+                              )}
+                            />
+                          </PaginationItem>
+                        </PaginationContent>
+                      </Pagination>
+                    )}
+                  </div>
+
+                  {/* Right: Count */}
+                  <div className="flex justify-end pr-1">
+                    <div className="flex flex-col items-end gap-0.5">
+                      <span className="text-[11px] font-black text-foreground">
+                        {Math.min((currentPage - 1) * pageSize + 1, filteredApplicants.length)} - {Math.min(currentPage * pageSize, filteredApplicants.length)} / {filteredApplicants.length}
+                      </span>
+                      <span className="text-[9px] font-black text-muted-foreground/50 uppercase tracking-widest">
+                        Applicants
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              )}
+
+                {/* Mobile Layout: Row Wise [Count top | Pagination below] */}
+                <div className="md:hidden flex flex-col items-center w-full">
+                  {/* Showing Count (Mobile) */}
+                  <div className="flex flex-col items-center">
+                    <span className="text-[10px] uppercase font-black tracking-[0.1em] text-muted-foreground">
+                      Showing {paginatedApplicants.length} of {filteredApplicants.length}
+                    </span>
+                  </div>
+
+                  {/* Pagination (Mobile) */}
+                  {totalPages > 1 && (
+                    <Pagination>
+                      <PaginationContent className="gap-1.5 overflow-x-auto no-scrollbar py-2 max-w-[100vw] justify-center">
+                        <PaginationItem>
+                          <PaginationPrevious 
+                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                            className={cn(
+                              "cursor-pointer h-9 w-9 p-0 rounded-full border-border bg-background text-foreground shadow-sm",
+                              currentPage === 1 && "pointer-events-none opacity-30"
+                            )}
+                          />
+                        </PaginationItem>
+                        
+                        {[...Array(totalPages)].map((_, i) => {
+                          const pageNum = i + 1;
+                          if (totalPages > 4) {
+                            if (pageNum !== 1 && pageNum !== totalPages && Math.abs(pageNum - currentPage) > 1) {
+                              if (pageNum === 2 || pageNum === totalPages - 1) {
+                                return (
+                                  <PaginationItem key={pageNum}>
+                                    <PaginationEllipsis className="h-9 w-4 text-muted-foreground/30" />
+                                  </PaginationItem>
+                                );
+                              }
+                              return null;
+                            }
+                          }
+                          return (
+                            <PaginationItem key={pageNum}>
+                              <PaginationLink 
+                                isActive={currentPage === pageNum}
+                                onClick={() => handlePageChange(pageNum)}
+                                className={cn(
+                                  "cursor-pointer mt-2 h-9 w-9 rounded-full text-[11px] font-black transition-all",
+                                  currentPage === pageNum 
+                                    ? "bg-primary! text-white shadow-lg shadow-primary/20" 
+                                    : "bg-background border border-border text-muted-foreground"
+                                )}
+                              >
+                                {pageNum}
+                              </PaginationLink>
+                            </PaginationItem>
+                          );
+                        })}
+
+                        <PaginationItem>
+                          <PaginationNext 
+                            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                            className={cn(
+                              "cursor-pointer h-9 w-9 p-0 rounded-full border-border bg-background text-foreground shadow-sm",
+                              currentPage === totalPages && "pointer-events-none opacity-30"
+                            )}
+                          />
+                        </PaginationItem>
+                      </PaginationContent>
+                    </Pagination>
+                  )}
+                </div>
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
       </div>
+
+      <Dialog open={showAllWarning} onOpenChange={setShowAllWarning}>
+        <DialogContent className="max-w-[400px] rounded-3xl border-none p-6 shadow-2xl">
+          <DialogHeader>
+            <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-yellow-500/10">
+              <svg className="h-6 w-6 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <DialogTitle className="text-xl font-bold">Performance Warning</DialogTitle>
+            <DialogDescription className="text-sm font-medium text-muted-foreground pt-2">
+              Showing {pendingPageSize === filteredApplicants.length ? "all" : ""} {pendingPageSize} applicants at once may slow down your browser or cause the application to hang. Do you want to proceed?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="mt-6 flex gap-2 sm:flex-row flex-col">
+            <Button variant="ghost" onClick={() => setShowAllWarning(false)} className="flex-1 rounded-full font-bold h-11 text-muted-foreground hover:bg-muted">
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmShowAll} className="flex-1 rounded-full font-bold h-11 bg-primary! text-primary-foreground! hover:bg-primary/90!">
+              Proceed Anyway
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 
@@ -405,31 +672,45 @@ export default function DashboardPage() {
               {ApplicantsListContent}
             </>
           ) : (
-            <AnimatePresence mode="wait">
+            <div className="relative">
+              {/* Dashboard Content - Always mounted to avoid chart repaint lag */}
               <motion.div
-                key={activeMobileView}
-                initial={{ 
-                  opacity: 0, 
-                  scale: 0.99
-                }}
+                initial={false}
                 animate={{ 
-                  opacity: 1, 
-                  scale: 1
-                }}
-                exit={{ 
-                  opacity: 0, 
-                  scale: 0.99
+                  opacity: activeMobileView === "dashboard" ? 1 : 0,
+                  y: activeMobileView === "dashboard" ? 0 : 5
                 }}
                 transition={{ 
-                  type: "spring",
-                  damping: 30,
-                  stiffness: 250,
-                  mass: 0.5
+                  duration: 0.3,
+                  ease: [0.22, 1, 0.36, 1] as const
                 }}
+                className={cn(
+                  "w-full transition-all duration-300",
+                  activeMobileView !== "dashboard" ? "pointer-events-none absolute inset-0 invisible opacity-0 h-0 overflow-hidden" : "visible opacity-100"
+                )}
               >
-                {activeMobileView === "dashboard" ? DashboardContent : ApplicantsListContent}
+                {DashboardContent}
               </motion.div>
-            </AnimatePresence>
+
+              {/* Applicants List - Keeps filter state and list scroll position */}
+              <motion.div
+                initial={false}
+                animate={{ 
+                  opacity: activeMobileView === "applicants" ? 1 : 0,
+                  y: activeMobileView === "applicants" ? 0 : 5
+                }}
+                transition={{ 
+                  duration: 0.3,
+                  ease: [0.22, 1, 0.36, 1] as const
+                }}
+                className={cn(
+                  "w-full transition-all duration-300",
+                  activeMobileView !== "applicants" ? "pointer-events-none absolute inset-0 invisible opacity-0 h-0 overflow-hidden" : "visible opacity-100"
+                )}
+              >
+                {ApplicantsListContent}
+              </motion.div>
+            </div>
           )
         ) : (
           <div className="space-y-8 animate-pulse">

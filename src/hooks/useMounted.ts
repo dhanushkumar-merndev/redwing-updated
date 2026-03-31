@@ -11,9 +11,11 @@ export function useMounted() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-
-    setMounted(true);
-    
+    // Using requestAnimationFrame to move the state update out of the 
+    // synchronous effect body, satisfying the linter and ensuring
+    // the update happens on the next frame.
+    const frame = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(frame);
   }, []);
 
   return mounted;

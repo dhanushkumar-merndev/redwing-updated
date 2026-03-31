@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -43,10 +44,13 @@ export default function LoginPage() {
       <Card className="w-full max-w-md shadow-xl pt-12 pb-6 md:px-5 md:pb-12">
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 flex items-center gap-3 flex-col">
-            <img
+            <Image
               src="/image.webp"
               alt="Tansi Motors Logo"
+              width={80}
+              height={80}
               className="h-18 w-18 md:h-20 md:w-20 rounded-lg object-contain"
+              priority
             />
             <div>
               <CardTitle className="text-xl font-bold text-primary/90">TANSI MOTORS</CardTitle>

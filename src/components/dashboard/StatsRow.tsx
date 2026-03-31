@@ -21,19 +21,19 @@ const containerVariants: Variants = {
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.05,
-      delayChildren: 0.1,
+      staggerChildren: 0.03, // Reduced from 0.05
+      delayChildren: 0.05, // Reduced from 0.1
     },
   },
 };
 
 const cardVariants: Variants = {
-  hidden: { opacity: 0, y: 15 },
+  hidden: { opacity: 0, y: 10 }, // Reduced from 15
   visible: {
     opacity: 1,
     y: 0,
     transition: {
-      duration: 0.4,
+      duration: 0.3, // Reduced from 0.4
       ease: [0.25, 0.1, 0.25, 1.0] as const,
     },
   },
