@@ -135,7 +135,7 @@ export default function DashboardPage() {
   }, []);
 
   const stats = useMemo(() => {
-    const s = { pending: 0, interested: 0, inprocess: 0, rejected: 0 };
+    const s = { pending: 0, interested: 0, inprocess: 0, rnr: 0, rejected: 0 };
     applicants.forEach((a) => {
       const status = a.status as keyof typeof s;
       if (status in s) s[status]++;
@@ -325,7 +325,7 @@ export default function DashboardPage() {
 
   const DashboardContent = (
     <div className="space-y-3 mt-2">
-      <StatsRow stats={stats} />
+      <StatsRow stats={stats} totalCount={applicants.length} />
       <AnalyticsSection applicants={applicants} on404={handle404} />
       {mounted && !isDesktop && (
         <Button

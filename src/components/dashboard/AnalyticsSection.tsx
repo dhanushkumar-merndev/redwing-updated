@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition, useEffect, useCallback, memo, useDeferredValue } from "react";
+import { useMemo, useState, useEffect, useCallback, memo, useDeferredValue, useTransition } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -38,12 +38,16 @@ import { ROLE_SHORT_NAMES } from "@/lib/roles";
 import { DatePickerWithRange } from "@/components/ui/date-range-picker";
 import { format, isWithinInterval, startOfDay, endOfDay, parseISO, eachDayOfInterval } from "date-fns";
 import type { DateRange } from "react-day-picker";
-import type { AnalyticsEntry } from "@/app/api/analytics/route";
 import type { Applicant } from "@/types";
 import { ChartNoAxesCombined, BarChart3, Filter, Download } from "lucide-react";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
-interface PreparedEntry extends AnalyticsEntry {
+interface PreparedEntry {
+  id: string;
+  role: string;
+  status: string;
+  createdDate: string;
+  completedDate: string | null;
   _created: Date;
   _completed: Date | null;
 }
@@ -320,11 +324,50 @@ interface AnalyticsSectionProps {
   on404?: () => void;
 }
 
-const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: AnalyticsSectionProps) {
-  const [entries, setEntries]               = useState<PreparedEntry[]>([]);
-  const deferredEntries                     = useDeferredValue(entries);
-  
-  const [earliestDate, setEarliestDate]     = useState<Date | undefined>(undefined);
+const AnalyticsSection = memo(function AnalyticsSection({ applicants }: AnalyticsSectionProps) {
+  const toLocalDate = useCallback((dateStr: string): Date => {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  }, []);
+
+  const preparedEntries = useMemo<PreparedEntry[]>(() => {
+    const toDateStr = (date: Date) => {
+      const yStr = String(date.getFullYear());
+      const mStr = String(date.getMonth() + 1).padStart(2, "0");
+      const dStr = String(date.getDate()).padStart(2, "0");
+      return `${yStr}-${mStr}-${dStr}`;
+    };
+
+    return applicants.flatMap((app) => {
+      const created = new Date(app.created_time);
+      if (Number.isNaN(created.getTime())) {
+        return [];
+      }
+
+      let completed: Date | null = null;
+      if (app.status !== "pending" && app.updated.length > 0) {
+        const lastEntry = app.updated[app.updated.length - 1];
+        const lastTimestamp = lastEntry.split("|")[0];
+        const parsedCompleted = new Date(lastTimestamp);
+        if (!Number.isNaN(parsedCompleted.getTime())) {
+          completed = parsedCompleted;
+        }
+      }
+
+      return [{
+        id: app.id,
+        role: app.position,
+        status: app.status,
+        createdDate: toDateStr(created),
+        completedDate: completed ? toDateStr(completed) : null,
+        _created: toLocalDate(toDateStr(created)),
+        _completed: completed ? toLocalDate(toDateStr(completed)) : null,
+      }];
+    });
+  }, [applicants, toLocalDate]);
+
+  const deferredEntries = useDeferredValue(preparedEntries);
+
   const [chartType, setChartType]           = useState<"area" | "bar">("area");
   const [statusFilter, setStatusFilter]     = useState<ChartStatusFilter>("all");
   
@@ -335,53 +378,31 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
   const [workflowMode, setWorkflowMode]     = useState<"carry" | "unique">("carry");
   const [isCSVModalOpen, setIsCSVModalOpen] = useState(false);
   const [csvDateRange, setCSVDateRange]     = useState<DateRange | undefined>(undefined);
-  
   const [, startTransition] = useTransition();
 
-  // Helper date parser
-  const toLocalDate = useCallback((dateStr: string): Date => {
-    const [y, m, d] = dateStr.split("-").map(Number);
-    return new Date(y, m - 1, d);
-  }, []);
+  const earliestDate = useMemo(() => {
+    if (!preparedEntries.length) return undefined;
+    return preparedEntries.reduce<Date>((min, entry) => (
+      entry._created < min ? entry._created : min
+    ), preparedEntries[0]._created);
+  }, [preparedEntries]);
 
-  const fetchAnalytics = useCallback(() => {
-    startTransition(async () => {
-      try {
-        const res  = await fetch("/api/analytics", { cache: "no-store" });
-        if (!res.ok) {
-          if (res.status === 404) on404?.();
-          return;
-        }
-        const data = (await res.json()) as { entries: AnalyticsEntry[] };
-        const fetched = data.entries ?? [];
-        
-        if (fetched.length > 0) {
-          // Pre-parse dates to avoid expensive repeated parseISO/new Date calls in useMemo
-          const prepared: PreparedEntry[] = fetched.map(e => ({
-            ...e,
-            _created: toLocalDate(e.createdDate),
-            _completed: e.completedDate ? toLocalDate(e.completedDate) : null
-          }));
-          setEntries(prepared);
+  const latestDate = useMemo(() => {
+    if (!preparedEntries.length) return undefined;
+    return preparedEntries.reduce<Date>((max, entry) => (
+      entry._created > max ? entry._created : max
+    ), preparedEntries[0]._created);
+  }, [preparedEntries]);
 
-          const earliest = prepared.reduce<Date>((min, e) => {
-            return e._created < min ? e._created : min;
-          }, prepared[0]._created);
+  useEffect(() => {
+    if (!earliestDate || !latestDate) {
+      return;
+    }
 
-          const latest = prepared.reduce<Date>((max, e) => {
-            return e._created > max ? e._created : max;
-          }, prepared[0]._created);
-
-          setEarliestDate(earliest);
-          setTrendDateRange((prev) => prev ?? { from: earliest, to: latest });
-          setRoleDateRange((prev)  => prev ?? { from: earliest, to: latest });
-          setWorkflowDateRange((prev) => prev ?? { from: earliest, to: new Date() });
-        }
-      } catch (err) { console.error("Analytics fetch error:", err); }
-    });
-  }, [on404, toLocalDate]);
-
-  useEffect(() => { fetchAnalytics(); }, [fetchAnalytics]);
+    setTrendDateRange((prev) => prev ?? { from: earliestDate, to: latestDate });
+    setRoleDateRange((prev) => prev ?? { from: earliestDate, to: latestDate });
+    setWorkflowDateRange((prev) => prev ?? { from: earliestDate, to: new Date() });
+  }, [earliestDate, latestDate]);
 
   // Aggregation Logic (Now using deferred entries for buttery scroll)
   const trendData = useMemo(() => {
@@ -423,12 +444,12 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
     const from = startOfDay(roleDateRange.from);
     const to   = endOfDay(roleDateRange.to || roleDateRange.from);
     const map  = new Map<string, Omit<AggregatedPoint, "date">>();
-    let total = 0;
+    const uniqueIds = new Set<string>();
 
     (deferredEntries as unknown as PreparedEntry[]).forEach((e) => {
       const d = e._created;
       if (d >= from && d <= to) {
-        total++;
+        uniqueIds.add(e.id);
         if (!map.has(e.role)) map.set(e.role, { pending: 0, interested: 0, inprocess: 0, rnr: 0, rejected: 0 });
         const counts = map.get(e.role)!;
         if (isStatus(e.status)) {
@@ -442,7 +463,7 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
       role, ...counts, shortRole: ROLE_SHORT_NAMES[role.trim()] || role, fullName: role
     }));
 
-    return { data, total };
+    return { data, total: uniqueIds.size };
   }, [deferredEntries, roleDateRange]);
 
   const roleData = roleDataCalculated.data;

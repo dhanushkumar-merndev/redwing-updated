@@ -48,6 +48,7 @@ export interface StatsData {
   pending: number;
   interested: number;
   inprocess: number;
+  rnr: number;
   rejected: number;
 }
 
