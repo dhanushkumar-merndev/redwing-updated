@@ -54,23 +54,27 @@ const chartConfig = {
   pending:    { label: "Pending",    color: "var(--chart-1)" },
   interested: { label: "Interested", color: "var(--chart-3)" },
   inprocess:  { label: "In Process", color: "var(--chart-4)" },
+  rnr:        { label: "RNR",        color: "var(--chart-5)" },
   rejected:   { label: "Rejected",   color: "var(--chart-2)" },
   backlog:    { label: "Carry Pending (Total)", color: "var(--chart-1)" },
   completed:  { label: "Completed Today", color: "var(--chart-3)" },
   newLeads:   { label: "Actually Pending (New)", color: "var(--chart-4)" },
 } as const;
 
-const STATUS_KEYS = ["pending", "interested", "inprocess", "rejected"] as const;
+const STATUS_KEYS = ["pending", "interested", "inprocess", "rnr", "rejected"] as const;
+type ChartStatusKey = (typeof STATUS_KEYS)[number];
+type ChartStatusFilter = ChartStatusKey | "all";
 
 interface AggregatedPoint {
   date: string;
   pending: number;
   interested: number;
   inprocess: number;
+  rnr: number;
   rejected: number;
 }
 
-const isStatus = (s: string): s is keyof Omit<AggregatedPoint, "date"> => {
+const isStatus = (s: string): s is ChartStatusKey => {
   return (STATUS_KEYS as readonly string[]).includes(s);
 };
 
@@ -123,7 +127,7 @@ PillBarHorizontal.displayName = "PillBarHorizontal";
 /**
  * 📈 TrendChart: Isolated Trend rendering
  */
-const TrendChart = memo(({ data, type, activeKeys }: { data: AggregatedPoint[], type: "area" | "bar", activeKeys: (keyof typeof chartConfig)[] }) => {
+const TrendChart = memo(({ data, type, activeKeys }: { data: AggregatedPoint[], type: "area" | "bar", activeKeys: ChartStatusKey[] }) => {
   const isMobile = useMediaQuery("(max-width: 640px)");
   if (data.length === 0) return <div className="flex h-full items-center justify-center text-xs text-muted-foreground">No data in range</div>;
   
@@ -322,7 +326,7 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
   
   const [earliestDate, setEarliestDate]     = useState<Date | undefined>(undefined);
   const [chartType, setChartType]           = useState<"area" | "bar">("area");
-  const [statusFilter, setStatusFilter]     = useState<string>("all");
+  const [statusFilter, setStatusFilter]     = useState<ChartStatusFilter>("all");
   
   const [trendDateRange, setTrendDateRange] = useState<DateRange | undefined>(undefined);
   const [roleDateRange, setRoleDateRange]   = useState<DateRange | undefined>(undefined);
@@ -387,7 +391,7 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
     const map  = new Map<string, AggregatedPoint>();
 
     eachDayOfInterval({ start: from, end: to }).forEach((day) => {
-      map.set(format(day, "dd MMM"), { date: format(day, "dd MMM"), pending: 0, interested: 0, inprocess: 0, rejected: 0 });
+      map.set(format(day, "dd MMM"), { date: format(day, "dd MMM"), pending: 0, interested: 0, inprocess: 0, rnr: 0, rejected: 0 });
     });
 
     (deferredEntries as unknown as PreparedEntry[]).forEach((e) => {
@@ -409,6 +413,7 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
       pending:    statusFilter === "pending"    ? p.pending : 0,
       interested: statusFilter === "interested" ? p.interested : 0,
       inprocess:  statusFilter === "inprocess"  ? p.inprocess : 0,
+      rnr:        statusFilter === "rnr"        ? p.rnr : 0,
       rejected:   statusFilter === "rejected"   ? p.rejected : 0,
     }));
   }, [deferredEntries, trendDateRange, statusFilter]);
@@ -424,7 +429,7 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
       const d = e._created;
       if (d >= from && d <= to) {
         total++;
-        if (!map.has(e.role)) map.set(e.role, { pending: 0, interested: 0, inprocess: 0, rejected: 0 });
+        if (!map.has(e.role)) map.set(e.role, { pending: 0, interested: 0, inprocess: 0, rnr: 0, rejected: 0 });
         const counts = map.get(e.role)!;
         if (isStatus(e.status)) {
           const statusKey = e.status as keyof Omit<AggregatedPoint, "date">;
@@ -526,7 +531,10 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
     URL.revokeObjectURL(url); setIsCSVModalOpen(false);
   }, [applicants, csvDateRange]);
 
-  const activeTrendKeys = useMemo(() => statusFilter === "all" ? STATUS_KEYS : [statusFilter], [statusFilter]);
+  const activeTrendKeys = useMemo<ChartStatusKey[]>(
+    () => statusFilter === "all" ? [...STATUS_KEYS] : [statusFilter],
+    [statusFilter]
+  );
 
   return (
     <motion.div
@@ -597,7 +605,7 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
             <div className="h-6 w-px bg-border/40 mx-1" />
 
             {/* Status Filter */}
-            <Select value={statusFilter} onValueChange={(v) => startTransition(() => setStatusFilter(v as keyof typeof chartConfig))}>
+            <Select value={statusFilter} onValueChange={(v) => startTransition(() => setStatusFilter(v as ChartStatusFilter))}>
               <SelectTrigger className="h-9 w-36 text-xs font-bold border-border/60 bg-background/50 rounded-xl hover:border-primary/40 transition-colors">
                 <div className="flex items-center gap-2 truncate">
                   <Filter className="w-3 h-3 text-muted-foreground" />
@@ -610,6 +618,7 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
                 <SelectItem value="pending" className="text-chart-1 font-bold text-xs">PENDING</SelectItem>
                 <SelectItem value="interested" className="text-chart-3 font-bold text-xs">INTERESTED</SelectItem>
                 <SelectItem value="inprocess" className="text-chart-4 font-bold text-xs">IN PROCESS</SelectItem>
+                <SelectItem value="rnr" className="text-chart-5 font-bold text-xs">RNR</SelectItem>
                 <SelectItem value="rejected" className="text-chart-2 font-bold text-xs">REJECTED</SelectItem>
               </SelectContent>
             </Select>
@@ -617,7 +626,7 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
         </CardHeader>
         <CardContent className="h-[240px] px-5 pb-5 pt-0">
           {!deferredEntries.length && trendData.length === 0 ? <div className="h-full w-full bg-muted/20 animate-pulse rounded-2xl" /> : (
-            <TrendChart data={trendData} type={chartType} activeKeys={activeTrendKeys as (keyof typeof chartConfig)[]} />
+            <TrendChart data={trendData} type={chartType} activeKeys={activeTrendKeys} />
           )}
         </CardContent>
       </Card>

@@ -4,7 +4,7 @@ import { mapRow } from "@/lib/mapRow";
 import { rateLimit } from "@/lib/rateLimit";
 import { ALL_ROLES } from "@/lib/roles";
 import { isValidApplicantName } from "@/lib/utils";
-import type { Applicant, Role, ApplicantStatus } from "@/types";
+import { APPLICANT_STATUSES, type Applicant, type Role, type ApplicantStatus } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
     if (!/^\d{10}$/.test(phone)) errors.push("phone must be exactly 10 digits");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push("email is invalid");
     if (!ALL_ROLES.includes(position)) errors.push("position is invalid");
+    if (!APPLICANT_STATUSES.includes(status)) errors.push("status is invalid");
     if (feedback.length > 300) errors.push("feedback must be 300 characters or less");
 
     if (errors.length > 0) {

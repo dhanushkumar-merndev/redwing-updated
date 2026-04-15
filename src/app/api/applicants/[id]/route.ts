@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sheets, SHEET_ID, TAB_NAME } from "@/lib/sheets";
 import { rateLimit } from "@/lib/rateLimit";
-import type { ApplicantStatus, Role } from "@/types";
-
-const VALID_STATUSES: ApplicantStatus[] = ["pending", "rejected", "interested", "inprocess"];
+import { APPLICANT_STATUSES, type ApplicantStatus, type Role } from "@/types";
 
 export const dynamic = "force-dynamic";
 
@@ -50,7 +48,7 @@ export async function PUT(
 
     // Validation
     const errors: string[] = [];
-    if (!VALID_STATUSES.includes(status)) errors.push("status is invalid");
+    if (!APPLICANT_STATUSES.includes(status)) errors.push("status is invalid");
     if (feedback.length > 300) errors.push("feedback must be 300 characters or less");
 
     if (errors.length > 0) {

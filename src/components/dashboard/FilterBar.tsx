@@ -44,6 +44,7 @@ const SORT_FIELDS: { value: SortField; label: string }[] = [
 const STATUS_FILTERS: { value: ApplicantStatus | "all"; label: string }[] = [
   { value: "all", label: "All Statuses" },
   { value: "pending", label: "Pending" },
+  { value: "rnr", label: "RNR" },
   { value: "interested", label: "Interested" },
   { value: "inprocess", label: "In Process" },
   { value: "rejected", label: "Rejected" },

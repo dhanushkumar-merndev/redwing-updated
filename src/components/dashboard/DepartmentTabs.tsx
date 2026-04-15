@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useMounted } from "@/hooks/useMounted";
@@ -9,7 +10,7 @@ interface DepartmentTabsProps {
   activeDepartment: Department;
   activeStatus: ApplicantStatus | "all";
   departmentCounts?: { sales: number; service: number };
-  statusCounts?: { all: number; pending: number; interested: number; inprocess: number; rejected: number };
+  statusCounts?: { all: number; pending: number; interested: number; inprocess: number; rnr: number; rejected: number };
   onDepartmentChange: (dept: Department) => void;
   onStatusChange: (status: ApplicantStatus | "all") => void;
 }
@@ -17,9 +18,10 @@ interface DepartmentTabsProps {
 const STATUS_TABS: { value: ApplicantStatus | "all"; label: string; dotColor: string; activeText: string; activeBorderColor: string }[] = [
   { value: "all", label: "All", dotColor: "bg-muted-foreground/40", activeText: "text-muted-foreground", activeBorderColor: "border-muted-foreground/60 border-2" },
   { value: "pending", label: "Pending", dotColor: "bg-chart-1", activeText: "text-chart-1", activeBorderColor: "border-chart-1 border-2" },
-  { value: "rejected", label: "Rejected", dotColor: "bg-chart-2", activeText: "text-chart-2", activeBorderColor: "border-chart-2 border-2" },
+  { value: "rnr", label: "RNR", dotColor: "bg-chart-5", activeText: "text-chart-5", activeBorderColor: "border-chart-5 border-2" },
   { value: "interested", label: "Interested", dotColor: "bg-chart-3", activeText: "text-chart-3", activeBorderColor: "border-chart-3 border-2" },
   { value: "inprocess", label: "In Process", dotColor: "bg-chart-4", activeText: "text-chart-4", activeBorderColor: "border-chart-4 border-2" },
+  { value: "rejected", label: "Rejected", dotColor: "bg-chart-2", activeText: "text-chart-2", activeBorderColor: "border-chart-2 border-2" },
 ];
 
 const DEPARTMENTS: { value: Department; label: string }[] = [
@@ -36,6 +38,35 @@ export default function DepartmentTabs({
   onStatusChange,
 }: DepartmentTabsProps) {
   const mounted = useMounted();
+  const statusScrollerRef = useRef<HTMLDivElement | null>(null);
+  const statusButtonRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  useEffect(() => {
+    const container = statusScrollerRef.current;
+    const activeButton = statusButtonRefs.current[activeStatus];
+
+    if (!container || !activeButton) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const buttonRect = activeButton.getBoundingClientRect();
+    const leftOverflow = buttonRect.left - containerRect.left;
+    const rightOverflow = buttonRect.right - containerRect.right;
+
+    if (leftOverflow < 16) {
+      container.scrollBy({
+        left: leftOverflow - 16,
+        behavior: "smooth",
+      });
+      return;
+    }
+
+    if (rightOverflow > -16) {
+      container.scrollBy({
+        left: rightOverflow + 16,
+        behavior: "smooth",
+      });
+    }
+  }, [activeStatus]);
 
   return (
     <div className="flex flex-col gap-[var(--dash-gap)] w-full min-w-0 overflow-hidden">
@@ -77,15 +108,19 @@ export default function DepartmentTabs({
 
       {/* Status Chips (Image 5 Scrollable) */}
       <div 
-        className="flex w-full min-w-0 items-center gap-2 overflow-x-auto pl-1 pb-1 no-scrollbar scroll-smooth flex-nowrap touch-pan-x pointer-events-auto"
+        ref={statusScrollerRef}
+        className="flex w-full max-w-full min-w-0 items-center gap-2 overflow-x-auto pl-1 pb-1 no-scrollbar scroll-smooth flex-nowrap touch-pan-x pointer-events-auto"
         data-lenis-prevent
       >
-        <div className="flex flex-nowrap items-center gap-2 pr-4 min-w-0">
+        <div className="flex w-max flex-nowrap items-center gap-2 pr-4">
           {STATUS_TABS.map((tab) => {
             const isActive = activeStatus === tab.value;
             return (
               <button
                 key={tab.value}
+                ref={(node) => {
+                  statusButtonRefs.current[tab.value] = node;
+                }}
                 onClick={() => onStatusChange(tab.value)}
                 className={cn(
                   "relative flex flex-shrink-0 items-center gap-2 rounded-[var(--dash-card-radius)] px-4 py-2 border transition-all duration-[var(--dash-transition-fast)]",

@@ -48,7 +48,10 @@ export async function GET(req: NextRequest) {
 
     for (const app of applicants) {
       const s = app.status as ApplicantStatus;
-      if (s in stats) stats[s]++;
+      if (s in stats) {
+        const statsKey = s as keyof typeof stats;
+        stats[statsKey]++;
+      }
 
       // 1. Creation Date (Always fixed)
       const cDate = new Date(app.created_time);

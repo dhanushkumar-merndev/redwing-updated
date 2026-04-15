@@ -112,6 +112,17 @@ const statusConfig: Record<
     activeBg: "bg-chart-4/50",
     icon: RefreshCw,
   },
+
+  rnr: {
+    label: "RNR",
+    color: "text-chart-5",
+    hoverColor: "hover:text-chart-5",
+    bgColor: "bg-chart-5/10",
+    borderColor: "border-chart-5/10",
+    activeBorder: "ring-2 ring-chart-5/20 border-chart-5",
+    activeBg: "bg-chart-5/50",
+    icon: AlertCircle,
+  },
 };
 
 export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, isPending, isSaving, isDesktop }: ApplicantCardProps) {
@@ -335,8 +346,8 @@ export const ApplicantCard = memo(function ApplicantCard({ applicant, onSave, is
                 Quick Decision
               </Label>
 
-              <div className="grid grid-cols-3 gap-1.5">
-                {(["rejected", "interested", "inprocess"] as const).map((s) => {
+              <div className="grid grid-cols-2 gap-1.5">
+                {(["rnr", "interested", "inprocess", "rejected"] as const).map((s) => {
                   const isSelected = formData.status === s;
                   const config = statusConfig[s as ApplicantStatus] || statusConfig.pending;
                   const StatusIcon = config.icon;

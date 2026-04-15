@@ -1,10 +1,14 @@
 import type { SalesRole, ServiceRole, Role } from "@/lib/roles";
 
-export type ApplicantStatus =
-  | "pending"
-  | "rejected"
-  | "interested"
-  | "inprocess";
+export const APPLICANT_STATUSES = [
+  "pending",
+  "rejected",
+  "interested",
+  "inprocess",
+  "rnr",
+] as const;
+
+export type ApplicantStatus = (typeof APPLICANT_STATUSES)[number];
 
 export type Department = "sales" | "service";
 
@@ -27,6 +31,7 @@ export interface AnalyticsDataPoint {
   pending: number;
   interested: number;
   inprocess: number;
+  rnr: number;
   rejected: number;
 }
 
@@ -35,6 +40,7 @@ export interface RoleBarData {
   pending: number;
   interested: number;
   inprocess: number;
+  rnr: number;
   rejected: number;
 }
 

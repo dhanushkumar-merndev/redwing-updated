@@ -153,7 +153,7 @@ export default function DashboardPage() {
   }, [applicants]);
 
   const statusCountsForActiveDept = useMemo(() => {
-    const s = { all: 0, pending: 0, interested: 0, inprocess: 0, rejected: 0 };
+    const s = { all: 0, pending: 0, interested: 0, inprocess: 0, rnr: 0, rejected: 0 };
     applicants.forEach((a) => {
       if (getDepartment(a.position) === activeDepartment) {
         s.all++;
@@ -373,10 +373,10 @@ export default function DashboardPage() {
         initial="hidden" 
         animate="visible"
       >
-        <div className="w-full sm:w-auto min-w-0">
+        <div className="w-full min-w-0 sm:flex-1">
           <DepartmentTabs {...departmentTabsProps} />
         </div>
-        <div className="w-full sm:w-auto">
+        <div className="w-full sm:w-auto sm:shrink-0">
           <FilterBar
           department={activeDepartment}
           searchQuery={searchQuery}
