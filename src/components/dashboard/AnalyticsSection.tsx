@@ -343,7 +343,7 @@ const AnalyticsSection = memo(function AnalyticsSection({ applicants, on404 }: A
   const fetchAnalytics = useCallback(() => {
     startTransition(async () => {
       try {
-        const res  = await fetch("/api/analytics");
+        const res  = await fetch("/api/analytics", { cache: "no-store" });
         if (!res.ok) {
           if (res.status === 404) on404?.();
           return;

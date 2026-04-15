@@ -1,20 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sheets, SHEET_ID, TAB_NAME, TAB_RANGE } from "@/lib/sheets";
 import { mapRow } from "@/lib/mapRow";
-import { getCache, setCache, clearCache } from "@/lib/cache";
 import { rateLimit } from "@/lib/rateLimit";
 import { ALL_ROLES } from "@/lib/roles";
+import { isValidApplicantName } from "@/lib/utils";
 import type { Applicant, Role, ApplicantStatus } from "@/types";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for") ?? "127.0.0.1";
   if (!rateLimit(ip, 60)) {
     return NextResponse.json({ error: "Too Many Requests" }, { status: 429 });
-  }
-
-  const cached = getCache<Applicant[]>("applicants");
-  if (cached) {
-    return NextResponse.json({ applicants: cached });
   }
 
   try {
@@ -29,7 +26,6 @@ export async function GET(req: NextRequest) {
       .map((row, index) => mapRow(row, index))
       .filter((a): a is Applicant => a !== null);
 
-    setCache("applicants", applicants);
     return NextResponse.json({ applicants });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
@@ -57,7 +53,9 @@ export async function POST(req: NextRequest) {
     const errors: string[] = [];
 
     if (!fullName) errors.push("full_name is required");
-    if (fullName && !/^[a-zA-Z\s]+$/.test(fullName)) errors.push("full_name must contain only letters and spaces");
+    if (fullName && !isValidApplicantName(fullName)) {
+      errors.push("full_name contains unsupported characters");
+    }
     if (!/^\d{10}$/.test(phone)) errors.push("phone must be exactly 10 digits");
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push("email is invalid");
     if (!ALL_ROLES.includes(position)) errors.push("position is invalid");
@@ -81,8 +79,6 @@ export async function POST(req: NextRequest) {
         values: [newRow],
       },
     });
-
-    clearCache();
 
     const applicant: Applicant = {
       id: "new",

@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sheets, SHEET_ID, TAB_NAME } from "@/lib/sheets";
-import { clearCache } from "@/lib/cache";
 import { rateLimit } from "@/lib/rateLimit";
-import { ALL_ROLES } from "@/lib/roles";
 import type { ApplicantStatus, Role } from "@/types";
 
 const VALID_STATUSES: ApplicantStatus[] = ["pending", "rejected", "interested", "inprocess"];
+
+export const dynamic = "force-dynamic";
 
 export async function PUT(
   req: NextRequest,
@@ -37,21 +37,19 @@ export async function PUT(
 
     const body = await req.json() as Record<string, unknown>;
 
-    // Build updated values from existing row, overriding with body values
-    const position = body.position !== undefined ? String(body.position) : String(row[1] ?? "");
-    const fullName = body.full_name !== undefined ? String(body.full_name).trim() : String(row[2] ?? "");
-    const phone = body.phone !== undefined ? String(body.phone).trim() : String(row[3] ?? "");
-    const email = body.email !== undefined ? String(body.email).trim() : String(row[4] ?? "");
-    const status = body.status !== undefined ? String(body.status) as ApplicantStatus : String(row[5] ?? "pending") as ApplicantStatus;
-    const feedback = body.feedback !== undefined ? String(body.feedback).trim() : String(row[6] ?? "");
+    const position = String(row[1] ?? "");
+    const fullName = String(row[2] ?? "").trim();
+    const phone = String(row[3] ?? "").trim();
+    const email = String(row[4] ?? "").trim();
+    const status = body.status !== undefined
+      ? (String(body.status).trim() as ApplicantStatus)
+      : (String(row[5] ?? "pending").trim() as ApplicantStatus);
+    const feedback = body.feedback !== undefined
+      ? String(body.feedback).trim()
+      : String(row[6] ?? "").trim();
 
     // Validation
     const errors: string[] = [];
-    if (!fullName) errors.push("full_name is required");
-    if (fullName && !/^[a-zA-Z\s]+$/.test(fullName)) errors.push("full_name must contain only letters and spaces");
-    if (!/^\d{10}$/.test(phone)) errors.push("phone must be exactly 10 digits");
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.push("email is invalid");
-    if (!ALL_ROLES.includes(position as Role)) errors.push("position is invalid");
     if (!VALID_STATUSES.includes(status)) errors.push("status is invalid");
     if (feedback.length > 300) errors.push("feedback must be 300 characters or less");
 
@@ -92,11 +90,9 @@ export async function PUT(
       },
     });
 
-    clearCache();
-
     return NextResponse.json({
       applicant: {
-        id: String(rowNumber),
+        id,
         created_time: String(row[0] ?? ""),
         position: position as Role,
         full_name: fullName,

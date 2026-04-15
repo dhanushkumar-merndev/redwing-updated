@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { sheets, SHEET_ID, TAB_RANGE } from "@/lib/sheets";
 import { mapRow } from "@/lib/mapRow";
-import { getCache, setCache } from "@/lib/cache";
 import { rateLimit } from "@/lib/rateLimit";
 import type { Applicant, ApplicantStatus } from "@/types";
+
+export const dynamic = "force-dynamic";
 
 export interface AnalyticsEntry {
   id: string;
@@ -22,11 +23,6 @@ export async function GET(req: NextRequest) {
   const ip = req.headers.get("x-forwarded-for") ?? "127.0.0.1";
   if (!rateLimit(ip)) {
     return NextResponse.json({ error: "Too Many Requests" }, { status: 429 });
-  }
-
-  const cached = getCache<AnalyticsResult>("analytics-v4");
-  if (cached) {
-    return NextResponse.json(cached);
   }
 
   try {
@@ -80,12 +76,9 @@ export async function GET(req: NextRequest) {
     }
 
     const result: AnalyticsResult = { entries, stats };
-    setCache("analytics-v4", result);
-
     return NextResponse.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json({ entries: [], stats: { pending: 0, interested: 0, inprocess: 0, rejected: 0 }, error: message }, { status: 200 });
   }
 }
-

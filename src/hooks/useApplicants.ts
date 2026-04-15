@@ -53,7 +53,7 @@ export const useApplicants = () => {
 
     startTransition(async () => {
       try {
-        const res = await fetch("/api/applicants");
+        const res = await fetch("/api/applicants", { cache: "no-store" });
         if (res.ok) {
           setConsecutive404Count(0);
           const data = (await res.json()) as { applicants: Applicant[] };
@@ -84,16 +84,31 @@ export const useApplicants = () => {
           const putRes = await fetch(`/api/applicants/${id}`, {
             method: "PUT",
             headers: { "Content-Type": "application/json" },
+            cache: "no-store",
             body: JSON.stringify({ ...data, user }),
           });
-          
+
           if (putRes.ok) {
             setConsecutive404Count(0);
+          } else if (putRes.status === 400) {
+            const errorData = (await putRes.json()) as { error?: string; errors?: string[] };
+            toast.error("Save failed", {
+              description: errorData.errors?.[0] ?? errorData.error ?? "The applicant could not be updated.",
+            });
+            onComplete?.();
+            return;
           } else if (putRes.status === 404) {
             setConsecutive404Count((prev) => prev + 1);
           } else if (putRes.status === 429) {
             toast.error("Update Limit Reached", {
               description: "You're saving changes too fast. Please wait a moment.",
+            });
+            onComplete?.();
+            return;
+          } else {
+            const errorData = (await putRes.json().catch(() => null)) as { error?: string } | null;
+            toast.error("Save failed", {
+              description: errorData?.error ?? "The applicant could not be updated.",
             });
             onComplete?.();
             return;
@@ -109,7 +124,7 @@ export const useApplicants = () => {
           onComplete?.(); // Complete UI feedback loop early
 
           // Re-fetch in background to sync with Sheet (id generation/timestamps)
-          const res = await fetch("/api/applicants");
+          const res = await fetch("/api/applicants", { cache: "no-store" });
           if (res.ok) {
             setConsecutive404Count(0);
             const refreshed = (await res.json()) as { applicants: Applicant[] };
@@ -138,6 +153,7 @@ export const useApplicants = () => {
           const postRes = await fetch("/api/applicants", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            cache: "no-store",
             body: JSON.stringify({ ...data, user }),
           });
 
@@ -156,7 +172,7 @@ export const useApplicants = () => {
           onComplete?.(); // UI feedback logic handle complete
 
           // Re-fetch all to get the new ID and sync
-          const res = await fetch("/api/applicants");
+          const res = await fetch("/api/applicants", { cache: "no-store" });
           if (res.ok) {
             setConsecutive404Count(0);
             const refreshed = (await res.json()) as { applicants: Applicant[] };
